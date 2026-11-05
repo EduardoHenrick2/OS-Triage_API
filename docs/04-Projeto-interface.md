@@ -1,9 +1,9 @@
 # 04 — Projeto de interface e contratos de API
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0, que descrevia o formulário visual do n8n (Form Trigger)
-- **Contrato de referência:** [openapi.yaml](openapi.yaml) (OpenAPI 3.0.3)
+- **Contrato atual:** este documento e o OpenAPI gerado em tempo de execução; `docs/openapi.yaml` será incorporado com o UC01 completo.
 
 ---
 
@@ -19,11 +19,10 @@ com contrato HTTP:
 | Consulta de ordens | Ferramenta do mecânico, planilha que aceite JSON, ou cURL | `GET /api/ordens-servico` e `GET /api/ordens-servico/{id}` |
 
 A API é um serviço ASP.NET Core. Em desenvolvimento, o documento OpenAPI gerado pelo próprio
-runtime fica em `/openapi/v1.json`. A interface Swagger UI pode ser ligada na mesma
-configuração. O arquivo `docs/openapi.yaml` é a referência versionada, e um teste
-automatizado garante que ele coincide com o que a API expõe (HU16).
+runtime fica em `/openapi/v1.json`. O arquivo versionado `docs/openapi.yaml` ainda não integra
+esta etapa: ele será gerado a partir do contrato real quando o UC01 for implementado.
 
-**Endereço base de desenvolvimento:** `http://localhost:5000` (configurável). A API escuta
+**Endereço base de desenvolvimento:** `http://127.0.0.1:5197`. O Kestrel escuta
 somente em `127.0.0.1` (RNF10).
 
 ---
@@ -64,7 +63,7 @@ Os nomes da especificação (`modelo_moto`, `urgencia_final`) viram `camelCase` 
 
 | Método | Rota | Função | Códigos de sucesso | Códigos de erro |
 | ------ | ---- | ------ | ------------------ | --------------- |
-| `POST` | `/api/triagem` | Registra um relato (UC01) | 200, 422 | 400, 415, 429, 502, 503, 500 |
+| `POST` | `/api/triagem` | Valida o contrato do relato; UC01 ainda pendente | 501 nesta etapa; 200 e 422 após o UC01 | 400, 415; 429, 502, 503 e 500 após o UC01 |
 | `POST` | `/api/telegram/webhook` | Recebe uma mensagem do bot (UC01, RF14) | 200 | 400, 401, 500 |
 | `GET` | `/api/ordens-servico` | Lista ordens com filtros (UC02) | 200 | 400, 500 |
 | `GET` | `/api/ordens-servico/{id}` | Mostra uma ordem (UC02) | 200 | 400, 404, 500 |
@@ -73,8 +72,9 @@ Os nomes da especificação (`modelo_moto`, `urgencia_final`) viram `camelCase` 
 
 ## 4. `POST /api/triagem`
 
-Registra um relato de cliente e devolve a ficha, a pergunta ou o erro. É o contrato do
-atendimento pelo cliente REST.
+Registra um relato de cliente e devolve a ficha, a pergunta ou o erro quando o UC01 estiver
+implementado. Nesta etapa, o endpoint valida o contrato e responde **501 Not Implemented** para
+uma entrada válida.
 
 ### 4.1 Requisição
 
@@ -89,7 +89,7 @@ atendimento pelo cliente REST.
 **Corpo: `CriarRelatoRequest`**
 
 ```csharp
-public sealed record CriarRelatoRequest(string Relato);
+public sealed record CriarRelatoRequest(string? Relato);
 ```
 
 | Campo | Tipo | Obrigatório | Regra |
@@ -108,7 +108,7 @@ Assim, o cliente não consegue alterar as regras de urgência nem a categoria.
 ```
 
 ```bash
-curl -i -X POST http://localhost:5000/api/triagem \
+curl -i -X POST http://127.0.0.1:5197/api/triagem \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: balcao-2026-11-04-0001" \
   -d '{"relato":"Honda CB 300 2017. O freio dianteiro está mole, preciso puxar bem a manete."}'
@@ -158,7 +158,12 @@ pergunta reprodutível:
 
 ### 4.3 Respostas
 
-**200 OK: ficha gravada (`resultado = "gravada"`)**
+**501 Not Implemented: contrato válido, UC01 pendente**
+
+Enquanto o cliente Gemini e a persistência estiverem fora de escopo, qualquer corpo válido retorna
+`application/problem+json` com status 501. Nenhum dado é processado ou gravado.
+
+**200 OK: ficha gravada (`resultado = "gravada"`) — contrato futuro do UC01**
 
 ```json
 {
@@ -523,7 +528,7 @@ no webhook do Telegram, cujos records usam `[JsonPropertyName]` para os nomes `s
 
 ```csharp
 // Entrada: POST /api/triagem
-public sealed record CriarRelatoRequest(string Relato);
+public sealed record CriarRelatoRequest(string? Relato);
 
 // Saída: POST /api/triagem (200 e 422). Definido na seção 4.2.
 public sealed record FichaServicoResponse(
@@ -577,3 +582,12 @@ public sealed record TelegramWebhookReply(
 
 **Regra de nomes.** O campo `From` do `Update` do Telegram não é mapeado. Assim, o nome do cliente
 ou do atendente nunca chega ao modelo de dados (RNF02).
+
+---
+
+## 12. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Alinha o contrato de entrada ao campo único `relato`, registra a resposta 501 enquanto o UC01 está pendente e fixa o endereço local em `127.0.0.1:5197`. |
+| 2.0 | 04/11/2026 | Define os contratos HTTP planejados para a API .NET. |

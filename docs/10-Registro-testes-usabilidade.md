@@ -1,7 +1,7 @@
 # 10 — Registro de testes de usabilidade da API
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
 As tarefas, critérios e roteiro estão no [plano de testes de usabilidade](09-Plano-testes-usabilidade.md).
@@ -14,9 +14,9 @@ Estas verificações são automáticas e não contam como rodada de usabilidade.
 
 | Verificação | Resultado | Data |
 | ----------- | --------- | ---- |
-| `docs/openapi.yaml` validado como OpenAPI 3.0.3 | Sem erros de validação | 04/11/2026 |
-| Exemplos de requisição e resposta do documento 04 comparados com o `openapi.yaml` | Coerentes na versão 2.0 | 04/11/2026 |
-| Contrato contra a resposta real da API | Pendente: depende dos endpoints da fase 3 | a registrar |
+| `docs/openapi.yaml` validado como OpenAPI 3.0.3 | Não executado: arquivo não está presente nesta cópia local | 05/11/2026 |
+| OpenAPI gerado comparado com o código atual | `POST /api/triagem` contém somente `relato` | 05/11/2026 |
+| Contrato atual contra a resposta real da API | Oito casos HTTP conformes; contrato válido retorna 501 enquanto UC01 está pendente | 05/11/2026 |
 
 ---
 
@@ -95,3 +95,12 @@ Se não houver nenhum erro durante a rodada, escreva "nenhum erro registrado" ne
 - **Divergências de contrato encontradas e corrigidas:** a registrar.
 - **Problemas de integração encontrados:** a registrar.
 - **Mudança proposta para o contrato ou a documentação:** a registrar, ou "nenhuma" se o resultado for satisfatório.
+
+---
+
+## 7. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Corrige o registro: `docs/openapi.yaml` está ausente e registra a verificação real do OpenAPI gerado e do contrato HTTP parcial. |
+| 2.0 | 04/11/2026 | Cria o registro de usabilidade da API. |

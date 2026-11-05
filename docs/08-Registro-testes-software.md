@@ -1,7 +1,7 @@
 # 08 — Registro de testes de software
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
 Este registro reúne três tipos de evidência: execuções das suítes xUnit, integridade do gabarito
@@ -15,14 +15,34 @@ Uma linha por execução. Preencha a data e o total reais da rodada. Não estime
 
 | Data | Suíte | Escopo | Ambiente | Total | Passou | Falhou | Ignorado | Situação |
 | ---- | ----- | ------ | -------- | ----- | ------ | ------ | -------- | -------- |
-| 04/11/2026 | Compilação de `src/OsTriageApi` | Projeto principal | SDK .NET 10.0.114, ambiente de desenvolvimento em nuvem | — | — | — | — | Concluída: 0 erros, 0 avisos, com avisos tratados como erro |
-| 04/11/2026 | Unidade (`tests/OsTriageApi.Tests`, xUnit) | Normalização, risco, contrato, saída do LLM, decisor, categorias | SDK .NET 10.0.114, ambiente de desenvolvimento em nuvem | a executar | a executar | a executar | a executar | Escrita, mas não executada: o NuGet não está acessível neste ambiente (bloqueio de política do proxy). Executar com `dotnet test` na máquina do desenvolvedor e registrar a linha aqui |
-| 04/11/2026 | Verificação de núcleo (`tests/Verificacao`, sem pacotes externos) | Mesmos grupos de caso da suíte de unidade, em programa de console | SDK .NET 10.0.114, ambiente de desenvolvimento em nuvem | 44 | 44 | 0 | 0 | Checagem de ambiente, não é suíte oficial. Substituída pela suíte xUnit e removida antes do commit |
-| a registrar | Integração (`tests/OsTriageApi.Tests.Integracao`) | Endpoints, EF Core, idempotência, PostgreSQL em Testcontainers | a registrar | a executar | a executar | a executar | a executar | Ainda não criada (fase 3) |
+| 05/11/2026 | Compilação de `src/OsTriageApi` | Projeto principal | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
+| 05/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Contrato, normalização, risco vigente, categorias e regra de Outro | SDK .NET 10.0.401, Windows | 44 | 44 | 0 | 0 | Concluída em 81 ms |
+| 04/11/2026 | Verificação de núcleo (`tests/Verificacao`, sem pacotes externos) | Mesmos grupos de caso da suíte de unidade, em programa de console | SDK .NET 10.0.114, ambiente de desenvolvimento em nuvem | 44 | 44 | 0 | 0 | Evidência histórica do pacote anterior; o programa não existe neste repositório local |
+| a registrar | Integração (`tests/OsTriageApi.Tests.Integration`) | Endpoints, EF Core, idempotência, PostgreSQL em Testcontainers | a registrar | a executar | a executar | a executar | a executar | Ainda não criada (fase 3) |
 | a registrar | Avaliação (`tests/OsTriageApi.Tests.Avaliacao`) | 24 casos do gabarito, com 3 execuções cada | a registrar | a executar | a executar | a executar | a executar | Ainda não criada (fase 4). Executada somente com `AVALIACAO_HABILITADA=true` |
 
 **Regra de registro:** a linha só recebe números de uma execução real. Quando uma suíte não roda, a
 célula de situação diz o motivo.
+
+---
+
+**Verificação manual do contrato de `POST /api/triagem` em 05/11/2026**
+
+| Caso | Status obtido | Tipo/erro | Resultado |
+| ---- | ------------- | --------- | --------- |
+| Relato válido | 501 | `application/problem+json` | Conforme: UC01 pendente (501) |
+| Relato com três espaços | 400 | chave `relato` | Conforme |
+| Corpo sem `relato` | 400 | chave `relato` | Conforme |
+| Campo extra `urgenciaFinal` | 400 | chave `body` | Conforme |
+| Campo antigo `descricao` | 400 | chave `body` | Conforme |
+| JSON malformado | 400 | chave `body` | Conforme |
+| Relato com 2.001 caracteres | 400 | chave `relato` | Conforme |
+| Relato com 2.000 caracteres | 501 | `application/problem+json` | Conforme: UC01 pendente (501) |
+
+A escuta observada foi somente `127.0.0.1:5197`. O OpenAPI gerado em `/openapi/v1.json`
+contém `POST /api/triagem`, cujo esquema `CriarRelatoRequest` possui somente a propriedade `relato`.
+O arquivo `docs/openapi.yaml` não estava presente no projeto ou nos caminhos locais consultados,
+portanto não foi copiado nem reconstruído manualmente.
 
 ---
 
@@ -123,3 +143,12 @@ prompt, que deve ser uma só, e os erros que continuam depois da v2.
 - **Metas atingidas:** a registrar.
 - **Erros restantes e causa provável:** a registrar.
 - **Próxima ação:** a registrar, ou "encerrar a fase 4" se as metas foram atingidas.
+
+---
+
+## 9. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Registra build, 44 testes unitários e os oito casos HTTP executados contra o endpoint parcial. |
+| 2.0 | 04/11/2026 | Cria o registro para as suítes e futuras avaliações. |

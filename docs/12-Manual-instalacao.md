@@ -1,7 +1,7 @@
 # 12 — Manual de instalação e execução
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (instalação do n8n em Docker)
 
 Este manual leva da máquina vazia até a API respondendo, com o banco migrado, os testes
@@ -121,7 +121,7 @@ compartilha tabelas com outros projetos (ver [arquitetura](06-Arquitetura-soluca
 Os segredos ficam nos **user-secrets** do projeto da API, fora da pasta do repositório.
 
 ```powershell
-cd src\OsTriage.Api
+cd src\OsTriageApi
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=5432;Database=os_triage_api;Username=os_triage_app;Password=<mesma senha do .env>"
 dotnet user-secrets set "Gemini:ApiKey" "<chave do Google AI Studio>"
@@ -147,7 +147,7 @@ a decisão.
 lista vazia significa **nenhum chat autorizado** (modo fail closed). Para autorizar um chat:
 
 ```powershell
-cd src\OsTriage.Api
+cd src\OsTriageApi
 dotnet user-secrets set "Telegram:ChatsPermitidos:0" "<chat_id autorizado>"
 cd ..\..
 ```
@@ -160,7 +160,7 @@ As ferramentas do projeto, incluindo `dotnet-ef`, são restauradas a partir do m
 
 ```powershell
 dotnet tool restore
-dotnet ef database update --project src\OsTriage.Infrastructure --startup-project src\OsTriage.Api
+dotnet ef database update --project src\OsTriageApi --startup-project src\OsTriageApi
 ```
 
 Confirme que as tabelas existem:
@@ -177,14 +177,12 @@ Core (`__EFMigrationsHistory`).
 ## 9. Executar a API
 
 ```powershell
-dotnet run --project src\OsTriage.Api
+dotnet run --project src\OsTriageApi
 ```
 
-A API responde em `http://localhost:5000`, somente nesta máquina. Para conferir o contrato:
-
-- `http://localhost:5000/openapi/v1.json`: documento OpenAPI gerado pela própria API.
-- O arquivo versionado `docs/openapi.yaml` é a referência; o teste de contrato garante que os dois
-  coincidem.
+A API responde em `http://127.0.0.1:5197`, somente nesta máquina. O documento OpenAPI
+gerado pela implementação atual fica em `http://127.0.0.1:5197/openapi/v1.json` no ambiente
+Development. O arquivo `docs/openapi.yaml` será incorporado quando o UC01 completo for implementado.
 
 Para parar a API, pressione `Ctrl+C` no terminal.
 
@@ -195,28 +193,15 @@ Para parar a API, pressione `Ctrl+C` no terminal.
 Envie um relato fictício:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:5000/api/triagem `
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5197/api/triagem `
   -ContentType "application/json" `
   -Body '{"relato":"Honda CB 300 2017. O freio dianteiro está mole."}'
 ```
 
-Resultado esperado: resposta com `resultado = gravada`, `urgenciaFinal = alta` e
-`avisoUrgencia = true`. A mensagem ao cliente tem até 60 palavras.
+Resultado esperado nesta etapa: **501 Not Implemented** em `application/problem+json`, porque o
+contrato já é validado, mas o UC01, o Gemini e a persistência ainda não foram implementados.
 
-Confira a linha gravada:
-
-```powershell
-docker compose exec postgres psql -U os_triage_app -d os_triage_api -c "SELECT categoria, urgencia_llm, urgencia_final FROM ordens_servico;"
-```
-
-Repetir o mesmo envio com a mesma `Idempotency-Key` não cria outra linha:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:5000/api/triagem `
-  -Headers @{ "Idempotency-Key" = "teste-001" } `
-  -ContentType "application/json" `
-  -Body '{"relato":"Honda CB 300 2017. O freio dianteiro está mole."}'
-```
+A consulta ao banco e a idempotência entram com o UC01. Nesta etapa não há gravação de ordem.
 
 ---
 
@@ -232,7 +217,7 @@ dotnet test
 Para rodar só a suíte unitária:
 
 ```powershell
-dotnet test tests\OsTriage.Tests.Unit
+dotnet test tests\OsTriageApi.Tests.Unit
 ```
 
 ### 11.1 Avaliação com o Gemini
@@ -242,7 +227,7 @@ execuções cada). Por isso ela só roda quando habilitada explicitamente:
 
 ```powershell
 $env:AVALIACAO_HABILITADA = "true"
-dotnet test tests\OsTriage.Tests.Avaliacao
+dotnet test tests\OsTriageApi.Tests.Avaliacao
 Remove-Item Env:AVALIACAO_HABILITADA
 ```
 
@@ -255,7 +240,7 @@ casos pendentes.
 ## 12. Canal do Telegram (opcional)
 
 O webhook do Telegram exige um endereço HTTPS público. Em desenvolvimento, use um túnel para o
-`localhost:5000`. A ferramenta de túnel fica a critério de quem executa, desde que forneça HTTPS.
+`127.0.0.1:5197`. A ferramenta de túnel fica a critério de quem executa, desde que forneça HTTPS.
 
 1. Inicie o túnel e anote a URL HTTPS gerada.
 2. Registre o webhook na Bot API, com o segredo configurado no passo 7:
@@ -282,7 +267,7 @@ registre o webhook de novo.
 | Ver se o PostgreSQL está saudável | `docker compose ps` |
 | Ver os logs do PostgreSQL | `docker compose logs -f postgres` |
 | Compilar a solução | `dotnet build` |
-| Listar as migrações | `dotnet ef migrations list --project src\OsTriage.Infrastructure --startup-project src\OsTriage.Api` |
+| Listar as migrações | `dotnet ef migrations list --project src\OsTriageApi --startup-project src\OsTriageApi` |
 | Parar o PostgreSQL, mantendo os dados | `docker compose down` |
 
 **Atenção:** não use `docker compose down -v`. A opção `-v` apaga o volume `os_triage_pgdata`, com
@@ -344,7 +329,7 @@ volumes:
 | Docker Desktop não inicia | WSL 2 desatualizado ou virtualização desligada | Atualize o WSL (`wsl --install`) e ative a virtualização na BIOS/UEFI |
 | `password authentication failed` | Senha diferente entre `.env` e user-secrets | Use a mesma senha nos dois lugares e reinicie o contêiner |
 | Porta 5432 já em uso | Outro PostgreSQL local | Pare o outro serviço, ou mude a porta publicada no compose e na connection string |
-| `dotnet user-secrets` não encontra o projeto | Comando rodado fora de `src\OsTriage.Api` | Entre na pasta do projeto, ou use `--project` |
+| `dotnet user-secrets` não encontra o projeto | Comando rodado fora de `src\OsTriageApi` | Entre na pasta do projeto, ou use `--project` |
 | Migração falha com `relation already exists` | Banco errado: outro projeto usa o mesmo banco | Confirme `Database=os_triage_api` na connection string. A API não deve dividir banco com outro projeto |
 | `503` com `codigo = ia_indisponivel` | Chave do Gemini inválida ou cota esgotada | Confira a chave em user-secrets; se for cota, espere o reset diário (meia-noite do Pacífico) |
 | `502` com `codigo = saida_llm_invalida` | O modelo não cumpriu o esquema após as tentativas | Consulte `logs_execucoes` para ver a resposta bruta; isso é esperado em parte dos casos e entra na métrica de validade do JSON |
@@ -353,3 +338,12 @@ volumes:
 | `400` ao chamar a API | JSON inválido, campo desconhecido ou `Content-Type` ausente | Envie `Content-Type: application/json` e somente o campo `relato` |
 | Testes de integração ignorados | Docker não está ativo | Abra o Docker Desktop e rode `dotnet test` de novo |
 | Limite (429) do Gemini | Limite do nível gratuito atingido | Espere o próximo minuto ou o reset diário; rode a avaliação em lotes com pausa |
+
+---
+
+## 16. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Atualiza comandos para o projeto único, nomes das suítes, endereço `127.0.0.1:5197` e resposta 501 da etapa atual. |
+| 2.0 | 04/11/2026 | Adapta a instalação para a API .NET e PostgreSQL. |

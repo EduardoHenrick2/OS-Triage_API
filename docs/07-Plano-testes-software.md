@@ -1,7 +1,7 @@
 # 07 — Plano de testes de software
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (estratégia em n8n)
 - **Gabarito:** congelado em 01/11/2026, no commit `dcd385f`. Os 24 casos das seções 5.1 e 5.2 não
   foram alterados nesta versão.
@@ -56,7 +56,7 @@ futura, com um atendente de oficina de referência.
 | `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) | Sobe a API em memória para os testes de integração | Usa a mesma configuração de produção, com substituições de teste |
 | Testcontainers para .NET (PostgreSQL) | Banco descartável por execução de integração | Exige Docker ativo; sem Docker, a suíte é ignorada com aviso |
 | `ILlmClient` simulado, escrito à mão | Simula respostas do Gemini: válidas, inválidas, 401, 429 e 5xx | Sem biblioteca de mocks, para que cada resposta simulada fique explícita no código |
-| Comparação do contrato OpenAPI | Compara o documento gerado pela API com `docs/openapi.yaml` (CN22) | Comparação estrutural, com leitor de YAML |
+| OpenAPI gerado em tempo de execução | Confere o contrato atual exposto pela API; a comparação com `docs/openapi.yaml` entra com o UC01 | Sem comparação completa nesta fase |
 | `dotnet ef` | Aplica e verifica as migrações em banco limpo | Ferramenta fixada em `.config/dotnet-tools.json` |
 | Gemini API (Google AI Studio) | Extração, classificação e redação na avaliação | Limites e uso conferidos no console do AI Studio |
 | `tests/casos_teste.csv` | Gabarito dos 24 casos | Congelado no commit `dcd385f` |
@@ -73,17 +73,17 @@ futura, com um atendente de oficina de referência.
 
 | Nível | Projeto | O que testa | Dependências externas | Quando |
 | ----- | ------- | ----------- | --------------------- | ------ |
-| Unitário | `OsTriage.Tests.Unit` | Regras do domínio e o serviço de triagem, com `ILlmClient` simulado | Nenhuma | A cada alteração |
-| Integração | `OsTriage.Tests.Integration` | API completa em memória, com PostgreSQL em Testcontainers e LLM simulado | Docker | A cada alteração |
-| Contrato | `OsTriage.Tests.Integration` | Documento OpenAPI gerado igual a `docs/openapi.yaml` | Nenhuma | A cada alteração de DTO ou rota |
-| Aceitação (avaliação) | `OsTriage.Tests.Avaliacao` | Os 24 casos, três execuções cada, com Gemini real | Gemini e Docker | Fase 4, em lotes com pausa |
+| Unitário | `OsTriageApi.Tests.Unit` | Regras do domínio e o serviço de triagem, com `ILlmClient` simulado | Nenhuma | A cada alteração |
+| Integração | `OsTriageApi.Tests.Integration` | API completa em memória, com PostgreSQL em Testcontainers e LLM simulado | Docker | A cada alteração |
+| Contrato | `OsTriageApi.Tests.Integration` (futuro) | Comparação entre o OpenAPI gerado e `docs/openapi.yaml`, criada com o UC01 | Nenhuma | Após o UC01 |
+| Aceitação (avaliação) | `OsTriageApi.Tests.Avaliacao` | Os 24 casos, três execuções cada, com Gemini real | Gemini e Docker | Fase 4, em lotes com pausa |
 | Revisão manual | — | Segredos, logs e dados no repositório | — | Antes de cada publicação |
 
 ### 4.2 Cenários por requisito
 
 | ID | Cenário | Requisitos | Nível | Resultado esperado |
 | -- | ------- | ---------- | ----- | ------------------ |
-| CN01 | Enviar relato válido por `POST /api/triagem` | RF01 | Integração | 200 com ficha ou 422 com pergunta, conforme o conteúdo |
+| CN01 | Enviar relato válido por `POST /api/triagem` | RF01 | HTTP manual nesta etapa | 501 enquanto o UC01 estiver pendente; depois, 200 com ficha ou 422 com pergunta |
 | CN02 | Extrair JSON de um relato completo | RF02 | Aceitação | JSON no esquema em 100% das execuções do gabarito, após as retentativas |
 | CN03 | Categoria fora da lista das oito | RF03 | Unitário e integração | Rejeitada em código; nova tentativa disparada |
 | CN04 | Relato com palavra de risco e Gemini respondendo `media` | RF04 | Unitário | Urgência final `alta`; o valor do Gemini (`urgenciaLlm`) continua `media` |
@@ -104,7 +104,7 @@ futura, com um atendente de oficina de referência.
 | CN19 | Gravação com HMAC do relato | RNF02, RF10 | Integração | `relato_hash` é HMAC-SHA256 em hexadecimal; o mesmo relato com a mesma chave gera o mesmo valor; o texto não aparece no banco |
 | CN20 | Expurgo da resposta bruta após o prazo | RNF02 | Integração | Registros além do prazo de `Privacidade:RetencaoRespostaBrutaDias` ficam com `resposta_bruta` nula, e os demais campos são preservados |
 | CN21 | Restrições de integridade do banco | RF03, RF04 | Integração | Gravar `urgencia_final` rebaixada, ou categoria fora da lista, é recusado pelo PostgreSQL |
-| CN22 | Contrato OpenAPI | RF15, RNF12 | Contrato | Documento gerado pela API igual a `docs/openapi.yaml` |
+| CN22 | Contrato OpenAPI | RF15, RNF12 | Contrato futuro | Comparação entre o documento gerado e `docs/openapi.yaml` entra com o UC01 |
 | CN23 | Telegram com segredo inválido, ou chat fora da lista | RF14 | Integração | 401 para segredo inválido; 200 sem resposta para chat não autorizado, inclusive com lista vazia; nenhuma chamada ao Gemini |
 | CN24 | Telegram com `update_id` repetido | RF14, RF06 | Integração | 200 sem resposta no chat; uma única ordem |
 
@@ -186,7 +186,7 @@ O campo `null` indica dado que não está no relato.
    ano_esperado, categoria_esperada, urgencia_esperada, acao_esperada`. Ele é congelado no commit
    `dcd385f`. Qualquer alteração exige registro com data e motivo, e uma nova rodada.
 2. Com o Docker ativo e a chave do Gemini em user-secrets, habilitar a avaliação com a variável
-   `AVALIACAO_HABILITADA=true` e executar `dotnet test tests/OsTriage.Tests.Avaliacao`.
+   `AVALIACAO_HABILITADA=true` e executar `dotnet test tests/OsTriageApi.Tests.Avaliacao`.
 3. A suíte chama o mesmo serviço de aplicação do endpoint, três vezes por caso. Para cada execução,
    grava a versão do prompt, o modelo, a temperatura, `tempo_ms`, a resposta bruta e o resultado de
    cada verificação, em `logs_execucoes` e em `data/resultados_avaliacao.csv`.
@@ -283,3 +283,12 @@ pedir explicação, seguindo o [manual](12-Manual-instalacao.md).
 - [ ] Vídeo de demonstração de até 3 minutos
 - [ ] Nenhuma chave de API, token ou dado real no repositório, confirmado por revisão e varredura
 - [ ] Documentos 01 a 04, 06, 07 e 12 revisados contra o código publicado
+
+---
+
+## 9. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Atualiza os nomes das suítes e separa a verificação atual do contrato da futura comparação completa do OpenAPI. O gabarito da seção 5.2 não foi alterado. |
+| 2.0 | 04/11/2026 | Define a estratégia de testes da API .NET. |

@@ -3,5 +3,6 @@ namespace OsTriageApi.Relatos.Modelos;
 public enum UrgenciaRelato
 {
     Baixa = 1,
-    Alta
+    Media = 2,
+    Alta = 3
 }

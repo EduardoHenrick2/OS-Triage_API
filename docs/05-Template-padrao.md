@@ -1,7 +1,7 @@
 # 05 — Template padrão para componentes da API
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026), que documentava sub-fluxos de automação
 
 ---
@@ -27,7 +27,7 @@
 - **Tipo:** serviço de domínio | validador | endpoint HTTP | integração externa
 - **Identificador:** `Namespace.NomeDoTipo`
 - **Arquivo fonte:** `src/OsTriageApi/caminho/Arquivo.cs`
-- **Testes:** `tests/OsTriageApi.Tests/caminho/ArquivoTests.cs`
+- **Testes:** `tests/OsTriageApi.Tests.Unit/caminho/ArquivoTests.cs`
 - **Versão:** número da versão do documento
 - **Data da última mudança:** DD/MM/AAAA
 
@@ -73,7 +73,7 @@ Segredos aparecem somente pelo nome da chave, nunca pelo valor.
 - **Tipo:** serviço de domínio
 - **Identificador:** `OsTriageApi.Relatos.Validacao.DecisorTriagem`
 - **Arquivo fonte:** `src/OsTriageApi/Relatos/Validacao/DecisorTriagem.cs`
-- **Testes:** `tests/OsTriageApi.Tests/Relatos/Validacao/DecisorTriagemTests.cs`
+- **Testes:** `tests/OsTriageApi.Tests.Unit/Relatos/Validacao/DecisorTriagemTests.cs`
 - **Versão:** 1.0
 - **Data da última mudança:** 04/11/2026
 
@@ -129,3 +129,12 @@ urgência final. Não faz chamada de rede, banco ou configuração, por isso é 
 | ------ | ---- | ------- |
 | 1.0 | 04/11/2026 | Primeira versão, com piso de risco e verificação de campos obrigatórios |
 ```
+
+---
+
+## 4. Histórico deste documento
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Atualiza os caminhos de testes para `OsTriageApi.Tests.Unit`. |
+| 2.0 | 04/11/2026 | Adapta o template aos componentes da API .NET. |

@@ -1,7 +1,7 @@
 # 03 — Metodologia
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
 ---
@@ -34,11 +34,15 @@ API .NET não estava no plano e consome parte da folga. Por isso, o cronograma f
 
 | Fase | Período (proposta) | Entrega | Critério de saída |
 | ---- | ------------------ | ------- | ----------------- |
-| 1. Ambiente .NET | 04/11 a 05/11 | Solução com os projetos, PostgreSQL em Docker, primeira migração e chamada de teste ao Gemini | `dotnet test` roda sem erro; uma chamada ao Gemini volta com resposta; uma ordem de teste é gravada |
+| 1. Ambiente .NET | 04/11 a 05/11 | Projeto único `OsTriageApi`, suítes separadas, PostgreSQL em Docker, primeira migração e chamada de teste ao Gemini | `dotnet test` roda sem erro; uma chamada ao Gemini volta com resposta; uma ordem de teste é gravada |
 | 2. Núcleo de domínio | 05/11 a 07/11 | Categorias, detector de risco, confirmação de dados, validação de saída e serviço de triagem com LLM simulado (RF01 a RF05, RF11) | Testes unitários do núcleo passam; o serviço responde a 5 casos de teste sem erro |
 | 3. API, persistência e canais | 08/11 a 09/11 | Endpoints, EF Core, idempotência, logs de execução, ProblemDetails, webhook do Telegram em fail closed (RF06, RF07, RF09, RF10, RF13, RF14) | Testes de integração passam; ficha gravada uma única vez; falha de API tratada com 503 |
 | 4. Testes e avaliação | 10/11 a 12/11 | 24 casos, métricas da v1 e da v2 do prompt, relatório (RF08) | Metas de precisão atingidas, ou data-limite de 12/11/2026 |
 | 5. Entrega | 13/11 a 16/11 | README, vídeo de até 3 minutos, revisão da documentação e divulgação (currículo e LinkedIn) | Definição de pronto cumprida (seção 8 do [plano de testes](07-Plano-testes-software.md)) |
+
+**Status da fase 1 em 05/11/2026:** em andamento. O projeto compila sem erros ou avisos e a suíte
+`OsTriageApi.Tests.Unit` passa, mas PostgreSQL, migração e chamada ao Gemini permanecem fora desta
+etapa. A fase só será marcada como concluída quando todos os critérios da tabela forem executados.
 
 **Prazos externos:** a entrega do projeto é **16/11/2026**. As inscrições do programa vão até
 **17/11/2026**, segundo o Seja Trainee. Essa data precisa ser confirmada na página oficial da vaga
@@ -47,8 +51,8 @@ antes de qualquer entrega.
 ### 2.1 Detalhamento da fase 1
 
 1. Instalar o .NET SDK na versão fixada em `global.json` e confirmar com `dotnet --version`.
-2. Criar a solução com os projetos `OsTriage.Api`, `OsTriage.Application`, `OsTriage.Domain`,
-   `OsTriage.Infrastructure` e as três suítes de teste.
+2. Criar o projeto único `src/OsTriageApi`, organizado por pastas de camada, e as três suítes
+   `OsTriageApi.Tests.Unit`, `OsTriageApi.Tests.Integration` e `OsTriageApi.Tests.Avaliacao`.
 3. Subir o PostgreSQL com `docker compose up -d postgres` e aplicar a primeira migração.
 4. Criar a chave no Google AI Studio e cadastrá-la em user-secrets.
 5. Criar o repositório `os-triage-api` com `.gitignore` para segredos, `.env` e a pasta `data/`.
@@ -120,3 +124,12 @@ carga contínua.
 | Migração aplicada em banco errado ou com nome de tabela em conflito | Banco dedicado `os_triage_api` e role própria (arquitetura, seção 4.8) |
 
 Os riscos técnicos completos estão na [arquitetura](06-Arquitetura-solucao.md), seção 9.
+
+---
+
+## 9. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Adota um projeto de aplicação com pastas por responsabilidade e registra o estado real da fase 1. |
+| 2.0 | 04/11/2026 | Replanejamento da implementação para .NET. |

@@ -1,7 +1,7 @@
 # 06 — Arquitetura da solução e modelo de dados
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0, que descrevia a arquitetura em n8n e planilha ou CSV
 
 ---
@@ -491,7 +491,7 @@ WHERE resposta_bruta IS NOT NULL
 | Cliente HTTP do LLM | `HttpClient` tipado, com `Microsoft.Extensions.Http.Resilience` | Chamadas ao Gemini, com tempo limite e repetição de erros transitórios | R$ 0 |
 | LLM | Gemini API (nível gratuito) | Extração, classificação e redação | R$ 0 no nível gratuito |
 | Testes | xUnit, `WebApplicationFactory`, Testcontainers (PostgreSQL) | Unitários, integração e avaliação | R$ 0 |
-| Contrato | OpenAPI 3.0 (`docs/openapi.yaml`) | Documentação e teste de contrato | R$ 0 |
+| Contrato | OpenAPI gerado em tempo de execução; `docs/openapi.yaml` será incorporado com o UC01 | Documentação do contrato | R$ 0 |
 | Versionamento | Git e GitHub | Código, migrações, prompts, gabarito | R$ 0 |
 
 ### 5.2 Decisões
@@ -536,57 +536,57 @@ ser revista com o tempo real medido na avaliação (meta de RNF04).
 
 ## 6. Estrutura da solução e componentes
 
-### 6.1 Projetos
+### 6.1 Projeto único e pastas por responsabilidade
 
 ```
 os-triage-api/
 ├── src/
-│   ├── OsTriage.Api/              # Endpoints, DTOs, ProblemDetails, webhook do Telegram, configuração
-│   ├── OsTriage.Application/      # Casos de uso (TriagemService, ConsultaOrdens) e portas (interfaces)
-│   ├── OsTriage.Domain/           # Regras puras: categorias, risco, confirmação, validação. Sem dependências
-│   └── OsTriage.Infrastructure/   # GeminiClient, EF Core, DbContext, migrações, repositórios
+│   └── OsTriageApi/
+│       ├── Endpoints/                 # Minimal APIs e tradução para respostas HTTP
+│       └── Relatos/
+│           ├── Configuracao/          # Opções tipadas e configuração JSON
+│           ├── Dtos/                  # Contratos de entrada e saída
+│           ├── Modelos/               # Tipos e regras sem dependência de infraestrutura
+│           └── Validacao/             # Validações determinísticas da triagem
 ├── tests/
-│   ├── OsTriage.Tests.Unit/           # Regras do domínio e serviço com LLM simulado
-│   ├── OsTriage.Tests.Integration/    # API + PostgreSQL em Testcontainers + LLM simulado
-│   ├── OsTriage.Tests.Avaliacao/      # 24 casos com Gemini real; só roda com opt-in
+│   ├── OsTriageApi.Tests.Unit/        # Contrato, categorias, risco e regras da ficha
+│   ├── OsTriageApi.Tests.Integration/ # API e PostgreSQL com dependências simuladas
+│   ├── OsTriageApi.Tests.Avaliacao/   # 24 casos com Gemini real; somente com opt-in
 │   └── casos_teste.csv                # Gabarito congelado (dados fictícios)
 ├── prompts/
-│   ├── v1.md                      # Prompt versionado
+│   ├── v1.md
 │   └── v2.md
-├── data/                          # Resultados de avaliação. Fora do Git (.gitignore)
-├── docs/                          # Esta documentação e o openapi.yaml
-├── docker-compose.yml             # PostgreSQL 17 com versão fixada
-├── .env.example                   # Variáveis locais, sem valores reais
-├── .gitignore                     # Inclui .env, data/ e segredos locais
-└── OsTriage.sln
+├── data/                              # Resultados de avaliação; fora do Git
+└── docs/
 ```
 
-**Regra de dependência.** `Api` depende de `Application`; `Application` depende de `Domain`;
-`Infrastructure` implementa as portas de `Application`. `Domain` não depende de nada. Assim, o
-núcleo de regras roda em teste unitário puro, sem rede, sem banco e sem ASP.NET.
+**Regra de dependência.** A aplicação permanece em um único projeto, `OsTriageApi`. As pastas
+separam responsabilidades: endpoints dependem das regras e dos contratos; regras de domínio não
+dependem de HTTP, banco ou Gemini. Os projetos de teste são separados da aplicação. Se o projeto
+crescer a ponto de exigir isolamento físico, a divisão em assemblies será uma decisão futura.
 
 ### 6.2 Componentes
 
-| Componente | Projeto | Responsabilidade | Requisitos |
-| ---------- | ------- | ---------------- | ---------- |
-| `TriagemEndpoints` | Api | Minimal API (grupo de endpoints): expõe `POST /api/triagem` e traduz o resultado em código HTTP | RF01, RF05, RF09 |
-| `TelegramWebhookHandler` | Api | Verifica, nesta ordem, o segredo, o chat autorizado (fail closed) e o texto; só então chama o serviço e monta o *webhook reply* | RF14 |
-| `ConsultaOrdensEndpoints` | Api | Minimal API (grupo de endpoints): expõe as consultas de ordens | RF13 |
-| `TriagemService` | Application | Executa o UC01: repetição controlada, idempotência, regras e gravação | RF02 a RF11 |
-| `ILlmClient` | Application (porta) | Contrato de extração e de redação, independente do fornecedor | RNF09 |
-| `GeminiClient` | Infrastructure | Implementa `ILlmClient` com `HttpClient` tipado | RF02, RF09 |
-| `ConsultaOrdensService` | Application | Executa o UC02 com filtros e ordenação | RF13 |
-| `Categorias` | Domain | Lista canônica das 8 categorias e normalização | RF03 |
-| `ValidadorSaidaLlm` | Domain | Valida JSON, esquema, tipos e categoria; descarta chaves desconhecidas | RF02, RF03, RNF03 |
-| `DetectorRisco` | Domain | Procura palavras de risco no relato normalizado | RF04 |
-| `ConfirmadorDados` | Domain | Mantém modelo e ano só se aparecerem no relato | RNF08 |
-| `VerificadorObrigatorios` | Domain | Lista campos obrigatórios ausentes e monta a pergunta | RF05 |
-| `LimitadorPalavras` | Domain | Conta palavras da mensagem ao cliente | RF07 |
-| `TabelaMarcas` | Domain | Enriquecimento de marca por tabela estática, depois da confirmação | Seção 6.4 da especificação |
-| `OrdemServicoRepository` | Infrastructure | Grava a ordem e os sintomas em transação; consulta a fila | RF06, RF13 |
-| `ExecucaoRepository` | Infrastructure | Grava os registros de execução | RF10 |
-| `RelatoHasher` | Infrastructure | Calcula o HMAC-SHA256 do relato com a chave de `Privacidade:ChaveHmac` | RNF02, RF10 |
-| `RetencaoRespostaBrutaService` | Infrastructure | Expurga `resposta_bruta` após o prazo, em segundo plano (seção 4.9) | RNF02 |
+| Componente | Área do projeto único | Responsabilidade | Requisitos |
+| ---------- | --------------------- | --------------- | ---------- |
+| `TriagemEndpoints` | `Endpoints` | Minimal API (grupo de endpoints): expõe `POST /api/triagem` e traduz o resultado em código HTTP | RF01, RF05, RF09 |
+| `TelegramWebhookHandler` | API (futuro) | Verifica, nesta ordem, o segredo, o chat autorizado (fail closed) e o texto; só então chama o serviço e monta o *webhook reply* | RF14 |
+| `ConsultaOrdensEndpoints` | API (futuro) | Minimal API (grupo de endpoints): expõe as consultas de ordens | RF13 |
+| `TriagemService` | Aplicação (futuro) | Executa o UC01: repetição controlada, idempotência, regras e gravação | RF02 a RF11 |
+| `ILlmClient` | Aplicação (porta futura) | Contrato de extração e de redação, independente do fornecedor | RNF09 |
+| `GeminiClient` | Infraestrutura (futuro) | Implementa `ILlmClient` com `HttpClient` tipado | RF02, RF09 |
+| `ConsultaOrdensService` | Aplicação (futuro) | Executa o UC02 com filtros e ordenação | RF13 |
+| `CategoriasCanonicas` | `Relatos/Modelos` | Lista canônica das 8 categorias e normalização | RF03 |
+| `ValidadorSaidaLlm` | `Relatos/Validacao` (futuro) | Valida JSON, esquema, tipos e categoria; descarta chaves desconhecidas | RF02, RF03, RNF03 |
+| `RegrasUrgencia` | `Relatos/Validacao` | Procura palavras de risco no relato normalizado | RF04 |
+| `ConfirmadorDados` | `Relatos/Validacao` (futuro) | Mantém modelo e ano só se aparecerem no relato | RNF08 |
+| `RegrasFicha` | `Relatos/Validacao` | Lista os campos obrigatórios ausentes e aplica o piso de urgência | RF04, RF05 |
+| `LimitadorPalavras` | `Relatos/Validacao` (futuro) | Conta palavras da mensagem ao cliente | RF07 |
+| `TabelaMarcas` | `Relatos/Modelos` (futuro) | Enriquecimento de marca por tabela estática, depois da confirmação | Seção 6.4 da especificação |
+| `OrdemServicoRepository` | Infraestrutura (futuro) | Grava a ordem e os sintomas em transação; consulta a fila | RF06, RF13 |
+| `ExecucaoRepository` | Infraestrutura (futuro) | Grava os registros de execução | RF10 |
+| `RelatoHasher` | Infraestrutura (futuro) | Calcula o HMAC-SHA256 do relato com a chave de `Privacidade:ChaveHmac` | RNF02, RF10 |
+| `RetencaoRespostaBrutaService` | Infraestrutura (futuro) | Expurga `resposta_bruta` após o prazo, em segundo plano (seção 4.9) | RNF02 |
 
 ### 6.3 Contratos principais
 
@@ -620,42 +620,27 @@ As funções abaixo mostram a lógica essencial. São o código de referência q
 unitários verificam.
 
 ```csharp
-// Domain: normalização para comparação (minúsculas, sem acento, sem espaços extras).
+// Relatos/Modelos: comparação sem caixa, acento ou espaços repetidos.
 public static class Normalizador
 {
-    public static string Normalizar(string texto) =>
-        new string(texto.Normalize(NormalizationForm.FormD)
-                        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                        .ToArray())
-            .Trim()
-            .ToLowerInvariant();
+    public static string Normalizar(string texto) { /* implementação pura e determinística */ }
 }
 
-// Domain: detecção de palavras de risco sobre o relato, nunca sobre a saída do modelo.
-public static class DetectorRisco
+// Relatos/Validacao: linha de base vigente, aplicada ao texto normalizado.
+public static class RegrasUrgencia
 {
-    private static readonly Regex[] Padroes =
-    [
-        new(@"\bfreios?\b", RegexOptions.Compiled),
-        new(@"\bvazamento de oleo\b", RegexOptions.Compiled),
-        new(@"\bperda de oleo\b", RegexOptions.Compiled),
-        new(@"\bfolga na direcao\b", RegexOptions.Compiled),
-        new(@"\bpneu (furado|careca)\b", RegexOptions.Compiled),
-        new(@"\bmoto desligando sozinha\b", RegexOptions.Compiled),
-    ];
+    // freios?, vazamento de oleo, perda de oleo, folga na direcao,
+    // pneu (furado|careca), moto desligando sozinha
+    public static string? BuscarExpressao(string texto) { /* retorna a expressão ou null */ }
+}
 
-    public static bool Detectar(string relato)
+// Relatos/Validacao: modelo e problema são obrigatórios; risco somente eleva a urgência.
+public static class RegrasFicha
+{
+    public static ResultadoRegrasFicha Avaliar(FichaExtraida ficha, string relato)
     {
-        var texto = Normalizador.Normalizar(relato);
-        return Padroes.Any(p => p.IsMatch(texto));
+        /* categoria Outro não exige detalhe; urgência final nunca é reduzida */
     }
-}
-
-// Domain: o piso de risco só eleva a urgência. Nunca a reduz.
-public static class Urgencia
-{
-    public static string Final(string urgenciaLlm, bool riscoDetectado) =>
-        riscoDetectado ? "alta" : urgenciaLlm;
 }
 ```
 
@@ -754,7 +739,7 @@ mais 9 na redação, total de 18. Para limitar o custo em cota, valem estas regr
 
 Quando a extração falha, a ficha não é gravada, mas o alerta de risco continua disponível:
 
-1. O `DetectorRisco` roda antes da extração, sobre o relato. Ele não depende do modelo.
+1. O `RegrasUrgencia` roda antes da extração, sobre o relato. Ele não depende do modelo.
 2. Em 502 ou 503, a resposta traz `urgenciaRiscoDetectado`. O Telegram mostra o aviso de risco
    junto com a mensagem de erro.
 3. O atendimento nunca recebe uma resposta vazia para um pedido que pode ser de risco.
@@ -775,7 +760,7 @@ o cliente.
 Tudo roda na máquina do desenvolvedor. Não há servidor, nuvem contínua nem hospedagem.
 
 - O PostgreSQL sobe pelo `docker-compose.yml`, com a porta publicada apenas em `127.0.0.1`.
-- A API escuta em `http://localhost:5000` (configurável).
+- A API escuta em `http://127.0.0.1:5197`, conforme o endpoint Kestrel de `appsettings.json`.
 - O fuso horário de exibição é `America/Sao_Paulo`. O banco guarda em UTC.
 
 ```yaml
@@ -899,12 +884,12 @@ que se queira manter.
 | ------------------------ | ------------------------------- |
 | Form Trigger (formulário de campo único) | `POST /api/triagem` com contrato `CriarRelatoRequest` |
 | Nó de chamada ao Gemini | `GeminiClient`, que implementa `ILlmClient` |
-| Nós de código (validações, risco, confirmação) | Projeto `OsTriage.Domain` |
+| Nós de código (validações, risco, confirmação) | Pastas `Relatos/Modelos` e `Relatos/Validacao` do projeto `OsTriageApi` |
 | Tabela estática de marcas no nó de código | `TabelaMarcas` no domínio |
 | Nó de Respond (resposta do formulário) | Resposta HTTP síncrona, com `FichaServicoResponse` |
 | Planilha ou CSV de fichas | Tabela `ordens_servico` e tabela `sintomas` |
 | Planilha ou CSV de execuções | Tabela `logs_execucoes` |
-| Fluxo de avaliação (n8n) | Projeto `OsTriage.Tests.Avaliacao` |
+| Fluxo de avaliação (n8n) | Projeto `OsTriageApi.Tests.Avaliacao` |
 | Fluxo de atendimento no Telegram (não existia) | `POST /api/telegram/webhook` |
 | Docker Compose do n8n | Docker Compose do PostgreSQL |
 | Arquivos JSON dos fluxos (`workflows/`) | Removidos da versão 2.0; o histórico fica no Git |
@@ -923,3 +908,12 @@ Fora da versão 2.0, por escopo ou por custo de implementação:
 - **Observabilidade** com OpenTelemetry, para acompanhar tempo e taxa de erro por etapa.
 - **Dados reais**, somente depois de uma análise de privacidade e de um contrato com o provedor
   do modelo, que substitua o nível gratuito.
+
+---
+
+## 13. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Confirma Minimal APIs em um único projeto `OsTriageApi`, com pastas por responsabilidade, suítes separadas e escuta exclusiva em `127.0.0.1:5197`. |
+| 2.0 | 04/11/2026 | Define a arquitetura inicial da API .NET e do PostgreSQL. |

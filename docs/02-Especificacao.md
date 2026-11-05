@@ -1,7 +1,7 @@
 # 02 — Especificação
 
-- **Versão:** 2.0
-- **Data da última mudança:** 04/11/2026
+- **Versão:** 2.1
+- **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026), que descrevia o fluxo em n8n
 
 > Esta versão adapta o projeto *Triagem de Ordens de Serviço* para uma API REST em
@@ -288,10 +288,10 @@ seção 6.4, regra 9.
 
 | Suíte | O que cobre | Chamadas externas |
 | ----- | ----------- | ----------------- |
-| Unitária (`OsTriage.Tests.Unit`) | Categorias canônicas, piso de risco, confirmação de dados, campos obrigatórios, validação de saída, limite de palavras, instruções no relato (CT-23 e CT-24) com LLM simulado | Nenhuma |
-| Integração (`OsTriage.Tests.Integration`) | Códigos HTTP de cada endpoint, idempotência, duplicidade, filtros e ordenação da consulta, webhook do Telegram. PostgreSQL em contêiner e LLM simulado | Nenhuma |
+| Unitária (`OsTriageApi.Tests.Unit`) | Categorias canônicas, piso de risco, confirmação de dados, campos obrigatórios, validação de saída, limite de palavras, instruções no relato (CT-23 e CT-24) com LLM simulado | Nenhuma |
+| Integração (`OsTriageApi.Tests.Integration`) | Códigos HTTP de cada endpoint, idempotência, duplicidade, filtros e ordenação da consulta, webhook do Telegram. PostgreSQL em contêiner e LLM simulado | Nenhuma |
 | Contrato | O documento OpenAPI gerado pela API é igual a `docs/openapi.yaml` | Nenhuma |
-| Avaliação (`OsTriage.Tests.Avaliacao`) | Os 24 casos, três execuções cada, com Gemini real. Só roda com a variável `AVALIACAO_HABILITADA=true` | Gemini (72 chamadas por rodada) |
+| Avaliação (`OsTriageApi.Tests.Avaliacao`) | Os 24 casos, três execuções cada, com Gemini real. Só roda com a variável `AVALIACAO_HABILITADA=true` | Gemini (72 chamadas por rodada) |
 
 **Fluxo normal**
 
@@ -427,7 +427,8 @@ Os valores são em minúsculas e sem acento, como no esquema da versão 1.0.
 ### 6.4 Regras de decisão
 
 1. Se faltar campo obrigatório, o núcleo detecta, a API responde **422** com a pergunta e
-   **não grava** a ordem.
+   **não grava** a ordem. A categoria `outro ou não identificado` não exige campo de detalhe:
+   a ficha é gravável quando contém modelo da moto e ao menos um sintoma com texto.
 2. Se modelo ou ano não aparecerem no texto do relato, o campo fica `null`. O sistema nunca
    deduz nem inventa.
 3. Palavras de risco no relato elevam a urgência final para `alta`, mesmo que o Gemini tenha
@@ -482,7 +483,7 @@ ou menos) ou se a negação precisa de tratamento próprio.
 Estes pontos precisam de decisão antes da fase de testes. Eles foram identificados ao
 comparar a lista de palavras de risco com o gabarito.
 
-Status: P3 e P4 adotadas; retenção de 30 dias aprovada como baseline; P5 adotada como valor provisório; P1 com proposta a validar (seção 6.5); P2 aguardando confirmação.
+Status: P3, P4 e P5 adotadas; retenção de 30 dias aprovada como baseline; P1 não adotada e mantida apenas como proposta a validar (seção 6.5); P2 aguardando confirmação.
 
 | ID | Pendência | Efeito hoje | Opções |
 | -- | --------- | ----------- | ------ |
@@ -539,3 +540,12 @@ decisão antes da fase de testes.
 Os próximos documentos usam os identificadores desta especificação. O
 [projeto de interface e contratos](04-Projeto-interface.md) define os endpoints, e a
 [arquitetura](06-Arquitetura-solucao.md) define o modelo de dados e os componentes.
+
+---
+
+## 10. Histórico de versões
+
+| Versão | Data | Mudança |
+| ------ | ---- | ------- |
+| 2.1 | 05/11/2026 | Confirma projeto único, nomes das suítes, regra de gravação da categoria Outro e manutenção da P1 fora de produção. O gabarito da seção 5.2 não foi alterado. |
+| 2.0 | 04/11/2026 | Migração da especificação do fluxo n8n para a API .NET. |
