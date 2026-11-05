@@ -1,6 +1,6 @@
 # 04 — Projeto de interface e contratos de API
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0, que descrevia o formulário visual do n8n (Form Trigger)
 - **Contrato atual:** este documento e o OpenAPI gerado em tempo de execução; `docs/openapi.yaml` será incorporado com o UC01 completo.
@@ -63,7 +63,7 @@ Os nomes da especificação (`modelo_moto`, `urgencia_final`) viram `camelCase` 
 
 | Método | Rota | Função | Códigos de sucesso | Códigos de erro |
 | ------ | ---- | ------ | ------------------ | --------------- |
-| `POST` | `/api/triagem` | Valida o contrato do relato; UC01 ainda pendente | 501 nesta etapa; 200 e 422 após o UC01 | 400, 415; 429, 502, 503 e 500 após o UC01 |
+| `POST` | `/api/triagem` | Executa o UC01 | 200, 422 | 400, 415, 502, 503, 500 |
 | `POST` | `/api/telegram/webhook` | Recebe uma mensagem do bot (UC01, RF14) | 200 | 400, 401, 500 |
 | `GET` | `/api/ordens-servico` | Lista ordens com filtros (UC02) | 200 | 400, 500 |
 | `GET` | `/api/ordens-servico/{id}` | Mostra uma ordem (UC02) | 200 | 400, 404, 500 |
@@ -72,9 +72,7 @@ Os nomes da especificação (`modelo_moto`, `urgencia_final`) viram `camelCase` 
 
 ## 4. `POST /api/triagem`
 
-Registra um relato de cliente e devolve a ficha, a pergunta ou o erro quando o UC01 estiver
-implementado. Nesta etapa, o endpoint valida o contrato e responde **501 Not Implemented** para
-uma entrada válida.
+Registra um relato de cliente e devolve a ficha, a pergunta ou um erro conforme o UC01.
 
 ### 4.1 Requisição
 
@@ -126,9 +124,9 @@ public sealed record FichaServicoResponse(
     string? ModeloMoto,
     int? Ano,
     IReadOnlyList<string> Sintomas,
-    string Categoria,                 // uma das 8 categorias canônicas
-    string UrgenciaLlm,               // "baixa" | "media" | "alta"
-    string UrgenciaFinal,             // "baixa" | "media" | "alta"
+    string? Categoria,                // uma das 8 categorias canônicas; null na pergunta sem problema
+    string? UrgenciaLlm,              // "baixa" | "media" | "alta"; null quando não classificável
+    string? UrgenciaFinal,            // piso de risco aplicado quando houver valor
     IReadOnlyList<string> PecasProvaveis,
     bool AvisoUrgencia,               // true quando UrgenciaFinal == "alta"
     IReadOnlyList<string> CamposFaltando,        // "modeloMoto" | "problema"
@@ -158,12 +156,7 @@ pergunta reprodutível:
 
 ### 4.3 Respostas
 
-**501 Not Implemented: contrato válido, UC01 pendente**
-
-Enquanto o cliente Gemini e a persistência estiverem fora de escopo, qualquer corpo válido retorna
-`application/problem+json` com status 501. Nenhum dado é processado ou gravado.
-
-**200 OK: ficha gravada (`resultado = "gravada"`) — contrato futuro do UC01**
+**200 OK: ficha gravada (`resultado = "gravada"`)**
 
 ```json
 {
@@ -534,7 +527,7 @@ public sealed record CriarRelatoRequest(string? Relato);
 public sealed record FichaServicoResponse(
     Guid IdPedido, Guid? IdOrdem, string Resultado,
     string? ModeloMoto, int? Ano, IReadOnlyList<string> Sintomas,
-    string Categoria, string UrgenciaLlm, string UrgenciaFinal,
+    string? Categoria, string? UrgenciaLlm, string? UrgenciaFinal,
     IReadOnlyList<string> PecasProvaveis, bool AvisoUrgencia,
     IReadOnlyList<string> CamposFaltando, string? PerguntaAoAtendente,
     IReadOnlyList<string> CamposNaoConfirmados, string? MensagemCliente,
@@ -589,5 +582,6 @@ ou do atendente nunca chega ao modelo de dados (RNF02).
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Substitui a resposta provisória 501 pelo UC01, registra campos anuláveis na resposta 422 e os códigos 200, 422, 502 e 503. |
 | 2.1 | 05/11/2026 | Alinha o contrato de entrada ao campo único `relato`, registra a resposta 501 enquanto o UC01 está pendente e fixa o endereço local em `127.0.0.1:5197`. |
 | 2.0 | 04/11/2026 | Define os contratos HTTP planejados para a API .NET. |

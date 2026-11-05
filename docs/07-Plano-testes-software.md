@@ -1,6 +1,6 @@
 # 07 — Plano de testes de software
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (estratégia em n8n)
 - **Gabarito:** congelado em 01/11/2026, no commit `dcd385f`. Os 24 casos das seções 5.1 e 5.2 não
@@ -83,7 +83,7 @@ futura, com um atendente de oficina de referência.
 
 | ID | Cenário | Requisitos | Nível | Resultado esperado |
 | -- | ------- | ---------- | ----- | ------------------ |
-| CN01 | Enviar relato válido por `POST /api/triagem` | RF01 | HTTP manual nesta etapa | 501 enquanto o UC01 estiver pendente; depois, 200 com ficha ou 422 com pergunta |
+| CN01 | Enviar relato válido por `POST /api/triagem` | RF01 | Unitário e integração manual | 200 com ficha ou 422 com pergunta, conforme o conteúdo |
 | CN02 | Extrair JSON de um relato completo | RF02 | Aceitação | JSON no esquema em 100% das execuções do gabarito, após as retentativas |
 | CN03 | Categoria fora da lista das oito | RF03 | Unitário e integração | Rejeitada em código; nova tentativa disparada |
 | CN04 | Relato com palavra de risco e Gemini respondendo `media` | RF04 | Unitário | Urgência final `alta`; o valor do Gemini (`urgenciaLlm`) continua `media` |
@@ -290,5 +290,6 @@ pedir explicação, seguindo o [manual](12-Manual-instalacao.md).
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Registra os testes unitários do UC01 com LLM e repositório simulados. O gabarito da seção 5.2 não foi alterado. |
 | 2.1 | 05/11/2026 | Atualiza os nomes das suítes e separa a verificação atual do contrato da futura comparação completa do OpenAPI. O gabarito da seção 5.2 não foi alterado. |
 | 2.0 | 04/11/2026 | Define a estratégia de testes da API .NET. |

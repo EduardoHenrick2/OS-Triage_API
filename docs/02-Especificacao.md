@@ -1,6 +1,6 @@
 # 02 — Especificação
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026), que descrevia o fluxo em n8n
 
@@ -192,10 +192,11 @@ são os do [documento de arquitetura](06-Arquitetura-solucao.md). Os contratos H
 5. O cliente do Gemini envia o relato delimitado como dado, junto com a instrução de
    versão `vN` e o esquema JSON. A resposta bruta é recebida.
 6. O validador de saída confere o JSON, o esquema, os tipos e a categoria (verificação 1).
-   Chaves desconhecidas são descartadas e registradas. A categoria é normalizada para a
+   Chaves desconhecidas rejeitam a saída e geram `falha_formato`. A categoria é normalizada para a
    forma canônica.
-7. O núcleo confirma modelo e ano no texto do relato. Valor que não aparece no texto vira
-   `null` e entra em `camposNaoConfirmados`.
+7. O núcleo confirma apenas o ano no texto do relato. Ano que não aparece no texto vira
+   `null` e entra em `camposNaoConfirmados`. A confirmação do modelo fica pendente porque
+   comparação textual simples quebra CT-19 e CT-20; nesta etapa, o modelo validado do LLM é mantido.
 8. O núcleo verifica os campos obrigatórios: modelo da moto e descrição do problema
    (verificação 2).
 9. O núcleo aplica o piso de urgência: se houver palavra de risco, a urgência final é
@@ -241,10 +242,9 @@ são os do [documento de arquitetura](06-Arquitetura-solucao.md). Os contratos H
   com `mensagemCliente: null` e `avisos: ["mensagem_nao_gerada"]`. A gravação não é
   desfeita por causa do texto para o cliente.
 
-**Regra de ordem.** A confirmação de modelo e ano (passo 7) acontece antes do enriquecimento
-de marca por tabela estática. Na versão 1.0, o enriquecimento vinha antes. Assim, "CG 160"
-virava "Honda CG 160" e a confirmação descartava o dado por não aparecer no relato. Veja
-seção 6.4, regra 9.
+**Regra temporária de modelo.** Nesta etapa, a saída validada do LLM para `modeloMoto` é mantida.
+A confirmação textual e o enriquecimento por `TabelaMarcas` ficam pendentes. A comparação literal
+não será usada porque descartaria modelos esperados em CT-19 e CT-20.
 
 ### 4.2 UC02 — Consultar ordens de serviço
 
@@ -429,8 +429,9 @@ Os valores são em minúsculas e sem acento, como no esquema da versão 1.0.
 1. Se faltar campo obrigatório, o núcleo detecta, a API responde **422** com a pergunta e
    **não grava** a ordem. A categoria `outro ou não identificado` não exige campo de detalhe:
    a ficha é gravável quando contém modelo da moto e ao menos um sintoma com texto.
-2. Se modelo ou ano não aparecerem no texto do relato, o campo fica `null`. O sistema nunca
-   deduz nem inventa.
+2. Se o ano não aparecer no texto do relato, o campo fica `null` e entra em
+   `camposNaoConfirmados`. A confirmação textual do modelo não é aplicada nesta etapa; o modelo
+   validado da saída do LLM é mantido, com a pendência registrada.
 3. Palavras de risco no relato elevam a urgência final para `alta`, mesmo que o Gemini tenha
    respondido outra coisa. A urgência nunca é reduzida.
 4. Urgência final `alta` sempre sinaliza o aviso (`avisoUrgencia: true`).
@@ -441,11 +442,9 @@ Os valores são em minúsculas e sem acento, como no esquema da versão 1.0.
    registrada. Se houver palavra de risco, a resposta traz `urgenciaRiscoDetectado: true`.
 8. Pedido repetido com a mesma chave de idempotência devolve a ficha existente e não gera
    nova ordem.
-9. **Nota de extração e enriquecimento.** O Gemini extrai o modelo estritamente como
-   redigido no relato. O enriquecimento de marca, como inferir "Honda" a partir de "CG 160",
-   é feito depois da confirmação, em código, por uma tabela estática (`TabelaMarcas`).
-   Modelo não mapeado passa sem alteração. O Gemini nunca completa o modelo com marca ou
-   outro dado que não esteja no texto.
+9. **Nota de extração e enriquecimento.** O Gemini recebe instrução para não inventar o modelo.
+   A confirmação textual do modelo e a tabela estática de marcas ainda não são aplicadas porque
+   a comparação simples quebra CT-19 e CT-20. Essa limitação permanece como pendência explícita.
 
 ### 6.5 Palavras de risco (lista inicial)
 
@@ -547,5 +546,6 @@ Os próximos documentos usam os identificadores desta especificação. O
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Implementa o UC01, confirma somente o ano no relato e registra a confirmação textual do modelo como pendência. |
 | 2.1 | 05/11/2026 | Confirma projeto único, nomes das suítes, regra de gravação da categoria Outro e manutenção da P1 fora de produção. O gabarito da seção 5.2 não foi alterado. |
 | 2.0 | 04/11/2026 | Migração da especificação do fluxo n8n para a API .NET. |

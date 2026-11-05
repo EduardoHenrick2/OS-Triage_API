@@ -1,6 +1,6 @@
 # 12 — Manual de instalação e execução
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (instalação do n8n em Docker)
 
@@ -198,10 +198,12 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5197/api/triagem `
   -Body '{"relato":"Honda CB 300 2017. O freio dianteiro está mole."}'
 ```
 
-Resultado esperado nesta etapa: **501 Not Implemented** em `application/problem+json`, porque o
-contrato já é validado, mas o UC01, o Gemini e a persistência ainda não foram implementados.
+Resultado esperado após configurar PostgreSQL, `Gemini:ApiKey`, `Privacidade:ChaveHmac` e a
+connection string em user-secrets: **200 OK** com ficha gravada, ou **422** se faltar modelo ou
+problema. Sem essas dependências, a API não está pronta para o teste de integração.
 
-A consulta ao banco e a idempotência entram com o UC01. Nesta etapa não há gravação de ordem.
+A consulta ao banco e a idempotência fazem parte do UC01. Repita a chamada com a mesma
+`Idempotency-Key` para confirmar que o mesmo `idOrdem` é devolvido sem nova extração.
 
 ---
 
@@ -289,18 +291,20 @@ O arquivo abaixo é o que está no repositório. Os valores sensíveis vêm do `
 services:
   postgres:
     image: postgres:17
-    container_name: os_triage_postgres
+    container_name: os_triage_api
     restart: unless-stopped
     environment:
-      POSTGRES_DB: os_triage_api
-      POSTGRES_USER: os_triage_app
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      APP_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
     ports:
       # Publicado somente em localhost. Não fica acessível pela rede.
       - "127.0.0.1:5432:5432"
     volumes:
       - os_triage_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U os_triage_app -d os_triage_api"]
       interval: 5s
@@ -345,5 +349,6 @@ volumes:
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Atualiza o primeiro teste para o UC01 e documenta as dependências obrigatórias em user-secrets e PostgreSQL. |
 | 2.1 | 05/11/2026 | Atualiza comandos para o projeto único, nomes das suítes, endereço `127.0.0.1:5197` e resposta 501 da etapa atual. |
 | 2.0 | 04/11/2026 | Adapta a instalação para a API .NET e PostgreSQL. |

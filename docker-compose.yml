@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: os_triage_api
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      APP_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - os_triage_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U os_triage_app -d os_triage_api"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  os_triage_pgdata:
+    name: os_triage_pgdata

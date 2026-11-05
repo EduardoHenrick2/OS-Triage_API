@@ -1,6 +1,6 @@
 # 10 — Registro de testes de usabilidade da API
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
@@ -16,7 +16,7 @@ Estas verificações são automáticas e não contam como rodada de usabilidade.
 | ----------- | --------- | ---- |
 | `docs/openapi.yaml` validado como OpenAPI 3.0.3 | Não executado: arquivo não está presente nesta cópia local | 05/11/2026 |
 | OpenAPI gerado comparado com o código atual | `POST /api/triagem` contém somente `relato` | 05/11/2026 |
-| Contrato atual contra a resposta real da API | Oito casos HTTP conformes; contrato válido retorna 501 enquanto UC01 está pendente | 05/11/2026 |
+| Baseline anterior do contrato contra a resposta real | Oito casos HTTP conformes quando o endpoint ainda devolvia 501; nova rodada do UC01 depende de PostgreSQL e Gemini | 05/11/2026 |
 
 ---
 
@@ -102,5 +102,6 @@ Se não houver nenhum erro durante a rodada, escreva "nenhum erro registrado" ne
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Marca o teste 501 como baseline anterior e registra que a nova rodada depende do ambiente do UC01. |
 | 2.1 | 05/11/2026 | Corrige o registro: `docs/openapi.yaml` está ausente e registra a verificação real do OpenAPI gerado e do contrato HTTP parcial. |
 | 2.0 | 04/11/2026 | Cria o registro de usabilidade da API. |

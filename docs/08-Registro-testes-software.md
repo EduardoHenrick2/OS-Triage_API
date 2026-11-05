@@ -1,6 +1,6 @@
 # 08 — Registro de testes de software
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
@@ -15,6 +15,8 @@ Uma linha por execução. Preencha a data e o total reais da rodada. Não estime
 
 | Data | Suíte | Escopo | Ambiente | Total | Passou | Falhou | Ignorado | Situação |
 | ---- | ----- | ------ | -------- | ----- | ------ | ------ | -------- | -------- |
+| 05/11/2026 | Compilação do UC01 em `src/OsTriageApi` | Endpoint, aplicação, Gemini, EF Core e migração | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
+| 05/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Núcleo anterior, validação da saída e fluxo UC01 com dependências simuladas | SDK .NET 10.0.401, Windows | 57 | 57 | 0 | 0 | Concluída em 94 ms |
 | 05/11/2026 | Compilação de `src/OsTriageApi` | Projeto principal | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
 | 05/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Contrato, normalização, risco vigente, categorias e regra de Outro | SDK .NET 10.0.401, Windows | 44 | 44 | 0 | 0 | Concluída em 81 ms |
 | 04/11/2026 | Verificação de núcleo (`tests/Verificacao`, sem pacotes externos) | Mesmos grupos de caso da suíte de unidade, em programa de console | SDK .NET 10.0.114, ambiente de desenvolvimento em nuvem | 44 | 44 | 0 | 0 | Evidência histórica do pacote anterior; o programa não existe neste repositório local |
@@ -26,7 +28,7 @@ célula de situação diz o motivo.
 
 ---
 
-**Verificação manual do contrato de `POST /api/triagem` em 05/11/2026**
+**Verificação manual do contrato de `POST /api/triagem` em 05/11/2026 — baseline anterior ao UC01**
 
 | Caso | Status obtido | Tipo/erro | Resultado |
 | ---- | ------------- | --------- | --------- |
@@ -43,6 +45,11 @@ A escuta observada foi somente `127.0.0.1:5197`. O OpenAPI gerado em `/openapi/v
 contém `POST /api/triagem`, cujo esquema `CriarRelatoRequest` possui somente a propriedade `relato`.
 O arquivo `docs/openapi.yaml` não estava presente no projeto ou nos caminhos locais consultados,
 portanto não foi copiado nem reconstruído manualmente.
+
+**Verificações externas do UC01 em 05/11/2026:** não executadas. O Docker Desktop não estava em
+execução, não havia PostgreSQL em `127.0.0.1:5432` e `Gemini:ApiKey`, `Privacidade:ChaveHmac` e a
+connection string ainda não estavam cadastradas no user-secrets. A migração foi gerada, mas não
+aplicada. A chamada real ao Gemini e a execução manual de CT-01 e CT-13 permanecem pendentes.
 
 ---
 
@@ -150,5 +157,6 @@ prompt, que deve ser uma só, e os erros que continuam depois da v2.
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Registra 57 testes do UC01 e os bloqueios externos de Docker, PostgreSQL e user-secrets. |
 | 2.1 | 05/11/2026 | Registra build, 44 testes unitários e os oito casos HTTP executados contra o endpoint parcial. |
 | 2.0 | 04/11/2026 | Cria o registro para as suítes e futuras avaliações. |

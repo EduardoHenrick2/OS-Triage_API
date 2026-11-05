@@ -1,6 +1,6 @@
 # 06 — Arquitetura da solução e modelo de dados
 
-- **Versão:** 2.1
+- **Versão:** 2.2
 - **Data da última mudança:** 05/11/2026
 - **Substitui:** versão 1.0, que descrevia a arquitetura em n8n e planilha ou CSV
 
@@ -51,19 +51,18 @@ Esta seção descreve o que se pode esperar do Gemini e o que o código precisa 
 
 ### 2.1 Saída guiada por esquema
 
-A chamada à API do Gemini pede resposta em JSON conforme um esquema, por meio da
-configuração de saída estruturada do próprio endpoint de geração. O nome exato do campo
-depende da versão da API e é confirmado na primeira chamada de teste (fase de implementação).
-O esquema reduz respostas malformadas, mas não as elimina e não garante que o conteúdo esteja
-certo. Por isso, a validação em código é a barreira real: determinística, testável e
-independente da obediência do modelo.
+A chamada REST usa `models.generateContent` e pede JSON estruturado por
+`generationConfig.responseMimeType = application/json` e `responseJsonSchema`. O formato foi
+confirmado na documentação oficial e no documento de descoberta v1beta da API em 05/11/2026.
+O esquema reduz respostas malformadas, mas não garante conteúdo correto; `ValidadorSaidaLlm`
+continua sendo a barreira determinística.
 
 ### 2.2 Dados ausentes retornam `null`
 
-O prompt manda o modelo usar `null` quando modelo ou ano não estiverem no relato. Ainda assim,
-o código faz uma segunda conferência: modelo e ano só são mantidos se aparecerem no texto
-(seção 6.4, `ConfirmadorDados`). Se não aparecerem, o campo vira `null` e entra em
-`camposNaoConfirmados`.
+O prompt manda o modelo usar `null` quando modelo ou ano não estiverem no relato. Nesta etapa,
+o código confirma somente o ano com `ConfirmadorAno`: valor que não aparece no relato vira `null`
+e entra em `camposNaoConfirmados`. A confirmação textual do modelo não é aplicada porque uma
+comparação simples quebra CT-19 e CT-20; essa proteção permanece pendente.
 
 ### 2.3 Variação entre execuções
 
@@ -139,7 +138,7 @@ insere cada categoria canônica e confirma que um valor fora da lista é recusad
 | `id` | UUID | Não | `gen_random_uuid()` | Chave primária |
 | `chave_idempotencia` | VARCHAR(100) | Não | — | `Idempotency-Key` do cliente, `telegram:{update_id}`, ou `rest:{idPedido}` quando o cliente não envia chave. Única |
 | `canal_origem` | VARCHAR(20) | Não | — | `rest` ou `telegram` |
-| `modelo_moto` | VARCHAR(120) | Sim | — | Modelo como redigido no relato (só se confirmado no texto) |
+| `modelo_moto` | VARCHAR(120) | Sim | — | Modelo devolvido pela saída validada do LLM; confirmação textual pendente nesta etapa |
 | `ano` | SMALLINT | Sim | — | Ano de fabricação, se confirmado no texto |
 | `categoria` | VARCHAR(40) | Não | — | Uma das 8 categorias canônicas |
 | `urgencia_llm` | VARCHAR(10) | Não | — | Urgência proposta pelo Gemini |
@@ -507,7 +506,7 @@ WHERE resposta_bruta IS NOT NULL
 | Idempotência | Chave única por pedido (`chave_idempotencia`) | Protege contra repetição do cliente e do Telegram | Sem controle, com duplicatas |
 | Saída do modelo | JSON com esquema e validação em código | Resposta fora do formato nunca chega à ficha | Aceitar texto livre e interpretar depois |
 | Urgência | Gemini mais piso de risco, em código e no banco | Errar uma urgência alta é o erro mais grave | Confiar só no modelo, ou só no banco |
-| Dados ausentes | `null`, confirmado no texto | Evita invenção de modelo e ano | Deixar o modelo preencher com estimativas |
+| Dados ausentes | `null`; ano confirmado no texto e confirmação de modelo pendente | Evita manter ano inventado sem quebrar CT-19 e CT-20 com comparação simplista | Confiar integralmente na saída sem validação |
 | Relato como dado | Relato delimitado no prompt e tratado como dado | Reduz o risco de o texto alterar as regras | Juntar o texto às instruções sem delimitação |
 | Dados de execução | HMAC-SHA256 do relato, com chave fora do banco, sem o texto | Privacidade (RNF02); impede verificação por dicionário | SHA-256 simples (verificável por dicionário); texto completo |
 | Repetição de chamadas | Biblioteca de resiliência do .NET, só para erros transitórios | Código de repetição padronizado e testado | Laço de repetição manual |
@@ -572,20 +571,19 @@ crescer a ponto de exigir isolamento físico, a divisão em assemblies será uma
 | `TriagemEndpoints` | `Endpoints` | Minimal API (grupo de endpoints): expõe `POST /api/triagem` e traduz o resultado em código HTTP | RF01, RF05, RF09 |
 | `TelegramWebhookHandler` | API (futuro) | Verifica, nesta ordem, o segredo, o chat autorizado (fail closed) e o texto; só então chama o serviço e monta o *webhook reply* | RF14 |
 | `ConsultaOrdensEndpoints` | API (futuro) | Minimal API (grupo de endpoints): expõe as consultas de ordens | RF13 |
-| `TriagemService` | Aplicação (futuro) | Executa o UC01: repetição controlada, idempotência, regras e gravação | RF02 a RF11 |
-| `ILlmClient` | Aplicação (porta futura) | Contrato de extração e de redação, independente do fornecedor | RNF09 |
-| `GeminiClient` | Infraestrutura (futuro) | Implementa `ILlmClient` com `HttpClient` tipado | RF02, RF09 |
+| `TriagemService` | `Relatos/Aplicacao` | Executa o UC01: repetição controlada, idempotência, regras e gravação | RF02 a RF11 |
+| `ILlmClient` | `Relatos/Aplicacao` | Contrato de extração e de redação, independente do fornecedor | RNF09 |
+| `GeminiLlmClient` | `Relatos/Infraestrutura` | Implementa `ILlmClient` com `HttpClient` tipado | RF02, RF09 |
 | `ConsultaOrdensService` | Aplicação (futuro) | Executa o UC02 com filtros e ordenação | RF13 |
 | `CategoriasCanonicas` | `Relatos/Modelos` | Lista canônica das 8 categorias e normalização | RF03 |
-| `ValidadorSaidaLlm` | `Relatos/Validacao` (futuro) | Valida JSON, esquema, tipos e categoria; descarta chaves desconhecidas | RF02, RF03, RNF03 |
+| `ValidadorSaidaLlm` | `Relatos/Validacao` | Valida JSON, esquema, tipos e categoria; rejeita chaves desconhecidas | RF02, RF03, RNF03 |
 | `RegrasUrgencia` | `Relatos/Validacao` | Procura palavras de risco no relato normalizado | RF04 |
-| `ConfirmadorDados` | `Relatos/Validacao` (futuro) | Mantém modelo e ano só se aparecerem no relato | RNF08 |
+| `ConfirmadorAno` | `Relatos/Validacao` | Mantém o ano somente se aparecer no relato; confirmação do modelo está pendente | RNF08 |
 | `RegrasFicha` | `Relatos/Validacao` | Lista os campos obrigatórios ausentes e aplica o piso de urgência | RF04, RF05 |
-| `LimitadorPalavras` | `Relatos/Validacao` (futuro) | Conta palavras da mensagem ao cliente | RF07 |
+| `LimitadorPalavras` | `Relatos/Validacao` | Conta palavras da mensagem ao cliente | RF07 |
 | `TabelaMarcas` | `Relatos/Modelos` (futuro) | Enriquecimento de marca por tabela estática, depois da confirmação | Seção 6.4 da especificação |
-| `OrdemServicoRepository` | Infraestrutura (futuro) | Grava a ordem e os sintomas em transação; consulta a fila | RF06, RF13 |
-| `ExecucaoRepository` | Infraestrutura (futuro) | Grava os registros de execução | RF10 |
-| `RelatoHasher` | Infraestrutura (futuro) | Calcula o HMAC-SHA256 do relato com a chave de `Privacidade:ChaveHmac` | RNF02, RF10 |
+| `EfTriagemRepository` | `Relatos/Infraestrutura/Persistencia` | Grava ordens, sintomas e execuções e resolve a idempotência | RF06, RF10, RF13 |
+| `RelatoHasher` | `Relatos/Infraestrutura` | Calcula o HMAC-SHA256 do relato com a chave de `Privacidade:ChaveHmac` | RNF02, RF10 |
 | `RetencaoRespostaBrutaService` | Infraestrutura (futuro) | Expurga `resposta_bruta` após o prazo, em segundo plano (seção 4.9) | RNF02 |
 
 ### 6.3 Contratos principais
@@ -769,14 +767,16 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: os_triage_api
-      POSTGRES_USER: os_triage_app
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # vem do .env, que não vai ao Git
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # segredo de inicialização
+      APP_PASSWORD: ${POSTGRES_PASSWORD}        # usado somente pelo script de criação da role
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - os_triage_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U os_triage_app -d os_triage_api"]
       interval: 5s
@@ -915,5 +915,6 @@ Fora da versão 2.0, por escopo ou por custo de implementação:
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 05/11/2026 | Registra UC01, EF Core/Npgsql, migração inicial, cliente Gemini REST com saída estruturada e confirmação apenas do ano; aplicação da migração e chamada real permanecem pendentes por ambiente. |
 | 2.1 | 05/11/2026 | Confirma Minimal APIs em um único projeto `OsTriageApi`, com pastas por responsabilidade, suítes separadas e escuta exclusiva em `127.0.0.1:5197`. |
 | 2.0 | 04/11/2026 | Define a arquitetura inicial da API .NET e do PostgreSQL. |
