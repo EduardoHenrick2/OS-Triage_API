@@ -1,7 +1,7 @@
 # 12 — Manual de instalação e execução
 
-- **Versão:** 2.2
-- **Data da última mudança:** 05/11/2026
+- **Versão:** 2.3
+- **Data da última mudança:** 07/11/2026
 - **Substitui:** versão 1.0 (instalação do n8n em Docker)
 
 Este manual leva da máquina vazia até a API respondendo, com o banco migrado, os testes
@@ -81,38 +81,37 @@ Substitua `<URL do repositório os-triage-api>` pelo endereço do repositório d
 
 ## 5. Configurar o ambiente
 
-Copie o modelo de configuração:
+Para executar a API diretamente com `dotnet run`, use user-secrets conforme a seção 7.
+Para executar a pilha completa com Docker Compose, defina no terminal estas variáveis antes da
+subida; o Compose as monta como Docker secrets e não grava os valores no YAML:
 
-```powershell
-copy .env.example .env
-```
+| Variável | Função |
+| -------- | ------ |
+| `POSTGRES_PASSWORD` | Senha de inicialização do PostgreSQL e da role `os_triage_app` |
+| `GEMINI_API_KEY` | Chave da API Gemini |
+| `PRIVACIDADE_CHAVE_HMAC` | Chave HMAC com pelo menos 32 caracteres |
 
-O `.env` tem apenas uma variável de segredo:
-
-| Variável | Função | Como preencher |
-| -------- | ------ | -------------- |
-| `POSTGRES_PASSWORD` | Senha do usuário do PostgreSQL usado pela API | Uma senha forte, gerada por você. Use a mesma no passo 7 |
-
-O `.env` não vai para o GitHub. A chave do Gemini, a chave HMAC e o token do Telegram **não** ficam
-no `.env`: eles vão para os user-secrets, no passo 7.
+Não versione `.env`, arquivos de secrets ou os valores exibidos pelo terminal.
 
 ---
 
-## 6. Subir o PostgreSQL
+## 6. Subir a pilha completa
+
+Com as três variáveis da seção 5 definidas:
 
 ```powershell
-docker compose up -d postgres
+docker compose up --build -d
 docker compose ps
 ```
 
-Aguarde o estado `healthy`. Para ver os logs:
+Aguarde o PostgreSQL ficar `healthy`. A API inicia depois dele, aplica a migração em ambiente
+Development e fica disponível apenas em `http://127.0.0.1:5197`. Para acompanhar:
 
 ```powershell
-docker compose logs -f postgres
+docker compose logs -f postgres api
 ```
 
-O banco criado é `os_triage_api`, com o usuário `os_triage_app`. Ele é dedicado à API, e não
-compartilha tabelas com outros projetos (ver [arquitetura](06-Arquitetura-solucao.md), seção 4.8).
+O banco criado é `os_triage_api`, com a role não administrativa `os_triage_app`.
 
 ---
 
@@ -277,51 +276,22 @@ todas as ordens e os registros de execução.
 
 ---
 
-## 14. Arquivo de referência: `docker-compose.yml`
+## 14. Arquivos de contêiner
 
-O arquivo abaixo é o que está no repositório. Os valores sensíveis vêm do `.env`.
+A pilha usa três arquivos versionados:
 
-```yaml
-# PostgreSQL do projeto os-triage-api.
-# Lê POSTGRES_PASSWORD do arquivo .env desta pasta.
-# Subir:  docker compose up -d postgres     Parar:  docker compose down
-# NUNCA use "docker compose down -v": ele apaga o volume os_triage_pgdata,
-# que guarda todas as ordens e os registros de execução.
+- `Dockerfile`: compila e publica a API em estágios separados, executando-a como usuário não root;
+- `docker-compose.yml`: sobe API e PostgreSQL, publica as portas somente em `127.0.0.1` e monta os secrets;
+- `docker/postgres/init/01-create-app-role.sh`: cria o banco dedicado e a role `os_triage_app` sem privilégios administrativos.
 
-services:
-  postgres:
-    image: postgres:17
-    container_name: os_triage_api
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
-      APP_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
-      POSTGRES_INITDB_ARGS: --encoding=UTF8
-    ports:
-      # Publicado somente em localhost. Não fica acessível pela rede.
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - os_triage_pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U os_triage_app -d os_triage_api"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+Valide a configuração antes de subir:
 
-volumes:
-  os_triage_pgdata:
-    name: os_triage_pgdata
+```powershell
+docker compose config --quiet
 ```
 
-**Observações sobre o arquivo:**
-
-- A imagem `postgres:17` é a versão principal fixada. A versão menor exata pode ser fixada depois da
-  primeira subida, como o n8n era fixado na versão 1.0.
-- O usuário da aplicação tem privilégios apenas sobre o próprio banco. Não é superusuário.
-- O volume `os_triage_pgdata` sobrevive a `docker compose down`.
+O volume `os_triage_pgdata` sobrevive a `docker compose down`. Não use `docker compose down -v`
+quando houver dados que devam ser preservados.
 
 ---
 
@@ -349,6 +319,7 @@ volumes:
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.3 | 07/11/2026 | Documenta a pilha completa com API, PostgreSQL, Dockerfile e Docker secrets. |
 | 2.2 | 05/11/2026 | Atualiza o primeiro teste para o UC01 e documenta as dependências obrigatórias em user-secrets e PostgreSQL. |
 | 2.1 | 05/11/2026 | Atualiza comandos para o projeto único, nomes das suítes, endereço `127.0.0.1:5197` e resposta 501 da etapa atual. |
 | 2.0 | 04/11/2026 | Adapta a instalação para a API .NET e PostgreSQL. |

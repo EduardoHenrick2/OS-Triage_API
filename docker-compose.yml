@@ -1,14 +1,16 @@
 services:
   postgres:
     image: postgres:17
-    container_name: os_triage_api
+    container_name: os_triage_postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
-      APP_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      APP_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_INITDB_ARGS: --encoding=UTF8
+    secrets:
+      - postgres_password
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -19,6 +21,37 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: os_triage_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      Kestrel__Endpoints__Http__Url: http://0.0.0.0:5197
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=os_triage_api;Username=os_triage_app
+    secrets:
+      - source: postgres_password
+        target: PostgresPassword
+      - source: gemini_api_key
+        target: Gemini__ApiKey
+      - source: privacidade_chave_hmac
+        target: Privacidade__ChaveHmac
+    ports:
+      - "127.0.0.1:5197:5197"
+
+secrets:
+  postgres_password:
+    environment: POSTGRES_PASSWORD
+  gemini_api_key:
+    environment: GEMINI_API_KEY
+  privacidade_chave_hmac:
+    environment: PRIVACIDADE_CHAVE_HMAC
 
 volumes:
   os_triage_pgdata:

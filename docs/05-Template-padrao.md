@@ -1,21 +1,21 @@
 # 05 — Template padrão para componentes da API
 
-- **Versão:** 2.1
-- **Data da última mudança:** 05/11/2026
-- **Substitui:** versão 1.0 (30/10/2026), que documentava sub-fluxos de automação
+- **Versão:** 2.2
+- **Data da última mudança:** 07/11/2026
+- **Substitui:** versão 2.1 (05/11/2026)
 
 ---
 
 ## 1. Como usar
 
-1. Copie o bloco da seção 2 para um arquivo novo em `docs/componentes/`, nomeado `NN-nome-do-componente.md`.
-2. Escolha o tipo do componente no campo **Tipo**: serviço de domínio, validador, endpoint HTTP ou integração externa. O mesmo modelo serve aos quatro tipos.
-3. Preencha todas as seções. Se uma seção não se aplicar, escreva "Não se aplica" e o motivo, em vez de apagá-la. Por exemplo, um validador puro não tem dependências de rede.
-4. Referencie requisitos pelo ID (`RF01`, `RNF03`), casos de teste pelo ID do gabarito (`CT-01`) e testes especiais pelo ID (`TE01`), sem copiar o texto do requisito.
-5. O identificador é o tipo C# com namespace e o caminho do arquivo fonte. Nunca use nome de fluxo visual.
-6. Em endpoints, registre o status HTTP e o `type` do ProblemDetails (RFC 9457). Em saídas do LLM, registre o código de falha (`codigo_erro`), que é o mesmo usado em `MotivoFalha`.
-7. Atualize o histórico de versões a cada mudança de comportamento, não a cada mudança de texto.
-8. Não descreva ferramentas de automação legadas no corpo do componente. A migração fica registrada em [01-Contexto](01-Contexto.md), seção 5.
+1. Copie o bloco da seção 2 para `docs/componentes/NN-nome-do-componente.md`.
+2. Classifique o componente como regra de domínio, serviço de aplicação, endpoint REST, persistência ou integração externa.
+3. Informe o tipo C#, o caminho real do fonte e os testes xUnit correspondentes.
+4. Referencie requisitos, casos `CT-NN` e testes especiais `TE-NN` sem duplicar o texto do gabarito.
+5. Para endpoints, registre método, rota, códigos HTTP e formato ProblemDetails.
+6. Para integrações, registre timeout, retentativas, configuração e tratamento de falhas.
+7. Segredos aparecem somente pelo nome da chave de configuração, nunca pelo valor.
+8. Atualize o histórico quando o comportamento ou o contrato mudar.
 
 ---
 
@@ -24,39 +24,36 @@
 ```markdown
 # NN — Nome do componente
 
-- **Tipo:** serviço de domínio | validador | endpoint HTTP | integração externa
+- **Tipo:** regra de domínio | serviço de aplicação | endpoint REST | persistência | integração externa
 - **Identificador:** `Namespace.NomeDoTipo`
 - **Arquivo fonte:** `src/OsTriageApi/caminho/Arquivo.cs`
 - **Testes:** `tests/OsTriageApi.Tests.Unit/caminho/ArquivoTests.cs`
-- **Versão:** número da versão do documento
+- **Versão:** número da versão
 - **Data da última mudança:** DD/MM/AAAA
 
 ## 1. Propósito
-Uma ou duas frases sobre o que o componente faz e por que ele existe.
+Descreva o que o componente faz e o limite de sua responsabilidade.
 
 ## 2. Contrato de entrada
-| Campo | Tipo | Obrigatório | Exemplo fictício | Origem |
-| ----- | ---- | ----------- | ---------------- | ------ |
+| Campo | Tipo | Obrigatório | Origem | Regra |
+| ----- | ---- | ----------- | ------ | ----- |
 
 ## 3. Contrato de saída
 | Campo | Tipo | Descrição |
 | ----- | ---- | --------- |
 
 ## 4. Regras aplicadas
-IDs de requisito e de regra de negócio que o componente implementa, por exemplo RF04, RF05 e a seção 6.4 da [especificação](02-Especificacao.md).
+Liste os requisitos e as regras da seção 6 da especificação.
 
 ## 5. Erros e tratamentos
-| Situação | Tratamento | Resultado (status HTTP, `type` ou código de falha) |
-| -------- | ---------- | -------------------------------------------------- |
+| Situação | Tratamento | Status HTTP ou código interno |
+| -------- | ---------- | ----------------------------- |
 
-## 6. Dependências
-Interfaces (por exemplo `ILlmClient`), chaves de configuração (por exemplo `Gemini:Modelo`), tabelas e colunas, e serviços externos.
-Segredos aparecem somente pelo nome da chave, nunca pelo valor.
+## 6. Dependências e configuração
+Liste interfaces, serviços registrados na injeção de dependência e chaves de configuração.
 
 ## 7. Como testar
-- Testes de unidade, com os nomes dos métodos xUnit.
-- Caso de teste de referência do gabarito (`CT-NN`) ou teste especial (`TENN`), do [plano de testes](07-Plano-testes-software.md).
-- Critério de aprovação.
+Liste testes xUnit, casos do gabarito e critério de aprovação.
 
 ## 8. Histórico de versões
 | Versão | Data | Mudança |
@@ -67,68 +64,39 @@ Segredos aparecem somente pelo nome da chave, nunca pelo valor.
 
 ## 3. Exemplo preenchido: `DecisorTriagem`
 
-```markdown
-# 01 — Decisor de triagem
-
-- **Tipo:** serviço de domínio
+- **Tipo:** regra de domínio
 - **Identificador:** `OsTriageApi.Relatos.Validacao.DecisorTriagem`
 - **Arquivo fonte:** `src/OsTriageApi/Relatos/Validacao/DecisorTriagem.cs`
-- **Testes:** `tests/OsTriageApi.Tests.Unit/Relatos/Validacao/DecisorTriagemTests.cs`
+- **Testes:** `tests/OsTriageApi.Tests.Unit/Relatos/DecisorTriagemTests.cs`
 - **Versão:** 1.0
-- **Data da última mudança:** 04/11/2026
+- **Data da última mudança:** 07/11/2026
 
-## 1. Propósito
-Decide o desfecho de um relato já extraído pelo LLM: gravar a ficha ou perguntar ao atendente.
-Aplica a detecção de risco, a confirmação do ano e a verificação de campos obrigatórios, e calcula a
-urgência final. Não faz chamada de rede, banco ou configuração, por isso é testado sem infraestrutura.
+### 3.1 Propósito
 
-## 2. Contrato de entrada
-| Campo | Tipo | Obrigatório | Exemplo fictício | Origem |
-| ----- | ---- | ----------- | ---------------- | ------ |
-| `relato` | string | Sim | "Honda CB 300 2017. O freio está mole." | `CriarRelatoRequest.Relato`, já validado por `ValidadorContratoRelato` |
-| `saida` | `SaidaExtracaoLlm` | Sim | Categoria `Freios`, urgência `Media` | Resultado de `ValidadorSaidaLlm.Validar`, com `Valido = true` |
+Receber uma `FichaExtraida` já validada, confirmar o ano no relato e aplicar `RegrasFicha`. O
+componente não acessa HTTP, Gemini ou PostgreSQL.
 
-## 3. Contrato de saída
-| Campo | Tipo | Descrição |
+### 3.2 Contrato
+
+| Entrada | Tipo | Regra |
+| ------- | ---- | ----- |
+| `ficha` | `FichaExtraida` | Saída aprovada por `ValidadorSaidaLlm` |
+| `relato` | string | Texto já aprovado por `RelatoValidador` |
+
+| Saída | Tipo | Descrição |
 | ----- | ---- | --------- |
-| `Resultado` | `ResultadoTriagem` | `Gravada` ou `Pergunta` |
-| `CamposFaltando` | lista de `CampoObrigatorio` | `modeloMoto` e `problema`, quando ausentes |
-| `UrgenciaFinal` | `Urgencia?` | Nulo quando o resultado é `Pergunta` |
-| `TemRisco` | bool | Verdadeiro se o relato contém palavra de risco vigente |
-| `ModeloMoto` | string? | Modelo informado pelo LLM |
-| `Ano` | int? | Ano confirmado no texto do relato; nulo se não aparece |
+| `Ficha` | `FichaExtraida` | Ficha com o ano confirmado ou nulo |
+| `Regras` | `ResultadoRegrasFicha` | Informa se a ficha é gravável, campos faltantes e urgência final |
+| `CamposNaoConfirmados` | `IReadOnlyList<string>` | Contém `ano` quando o valor extraído não aparece no relato |
 
-## 4. Regras aplicadas
-- RF04 (urgência, com piso de risco) e RF05 (campos obrigatórios).
-- RF11 (texto do relato tratado como dado): o componente não interpreta instruções contidas no relato.
-- RNF08 (validação determinística em código).
-- Regra de palavras de risco vigentes (seção 6.5 da [especificação](02-Especificacao.md)). A proposta de ampliação não entra neste componente.
+### 3.3 Regras e testes
 
-## 5. Erros e tratamentos
-| Situação | Tratamento | Resultado |
-| -------- | ---------- | --------- |
-| Campo obrigatório ausente | Resultado `Pergunta`, sem urgência final | Endpoint responde 422 com `camposFaltando`; nada é gravado |
-| Palavra de risco no relato | Urgência final `Alta`, independentemente da urgência do LLM | Ficha gravada com aviso de urgência alta |
-| Ano do LLM não aparece no relato | Ano vira nulo | Ficha gravada sem ano |
-| Saída do LLM inválida | Não chega a este componente; `ValidadorSaidaLlm` devolve o código de falha | Nova tentativa; 502 com `saida_llm_invalida` após 3 tentativas |
-
-## 6. Dependências
-- `DetectorRisco`, `ConfirmadorFicha` e `UrgenciaFinal`, no mesmo namespace.
-- Nenhuma dependência de infraestrutura.
-
-## 7. Como testar
-- Testes de unidade (xUnit):
-  - `Decidir_FichaCompletaComRisco_GravaComUrgenciaAlta`
-  - `Decidir_SemModelo_PerguntaSemUrgenciaFinal`
-  - `Decidir_SemRisco_MantemUrgenciaDoLlm`
-- Caso de referência: CT-01 (pedido claro, deve gravar) e CT-13 (sem modelo, deve perguntar), do [plano de testes](07-Plano-testes-software.md).
-- Critério de aprovação: os três testes de unidade passam e a decisão de CT-01 e CT-13 coincide com o gabarito.
-
-## 8. Histórico de versões
-| Versão | Data | Mudança |
-| ------ | ---- | ------- |
-| 1.0 | 04/11/2026 | Primeira versão, com piso de risco e verificação de campos obrigatórios |
-```
+- Modelo e problema são obrigatórios; ano é opcional.
+- Palavra de risco só eleva a urgência.
+- Categoria `outro ou não identificado` não exige detalhe.
+- A confirmação textual do modelo permanece fora desta etapa.
+- Testes: `Avaliar_AnoForaDoRelato_RemoveAnoERegistraCampo` e
+  `Avaliar_RiscoElevaUrgenciaSemAlterarUrgenciaExtraida`.
 
 ---
 
@@ -136,5 +104,6 @@ urgência final. Não faz chamada de rede, banco ou configuração, por isso é 
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.2 | 07/11/2026 | Atualiza o modelo para componentes C#, contratos REST e o `DecisorTriagem` real. |
 | 2.1 | 05/11/2026 | Atualiza os caminhos de testes para `OsTriageApi.Tests.Unit`. |
 | 2.0 | 04/11/2026 | Adapta o template aos componentes da API .NET. |

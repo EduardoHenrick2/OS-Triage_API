@@ -1,100 +1,78 @@
 # 10 — Registro de testes de usabilidade da API
 
-- **Versão:** 2.2
-- **Data da última mudança:** 05/11/2026
-- **Substitui:** versão 1.0 (30/10/2026)
+- **Versão:** 2.3
+- **Data da última mudança:** 07/11/2026
+- **Substitui:** versão 2.2 (05/11/2026)
 
-As tarefas, critérios e roteiro estão no [plano de testes de usabilidade](09-Plano-testes-usabilidade.md).
+As tarefas e critérios estão no plano de testes de usabilidade, documento 09.
 
 ---
 
-## 0. Verificações de contrato já feitas
+## 1. Evidências automáticas disponíveis
 
-Estas verificações são automáticas e não contam como rodada de usabilidade.
+Estas verificações apoiam a rodada, mas não contam como teste de usabilidade com participante.
 
 | Verificação | Resultado | Data |
 | ----------- | --------- | ---- |
-| `docs/openapi.yaml` validado como OpenAPI 3.0.3 | Não executado: arquivo não está presente nesta cópia local | 05/11/2026 |
-| OpenAPI gerado comparado com o código atual | `POST /api/triagem` contém somente `relato` | 05/11/2026 |
-| Baseline anterior do contrato contra a resposta real | Oito casos HTTP conformes quando o endpoint ainda devolvia 501; nova rodada do UC01 depende de PostgreSQL e Gemini | 05/11/2026 |
+| Build de `OsTriageApi` | 0 erros e 0 avisos | 07/11/2026 |
+| Suíte `OsTriageApi.Tests.Unit` | 59 aprovados, 0 falhas, 0 ignorados | 07/11/2026 |
+| Contrato de entrada | Somente `relato`; campos desconhecidos são rejeitados | 07/11/2026 |
+| UC01 com dependências simuladas | 200, 422, 502, 503, idempotência, risco e ano cobertos | 07/11/2026 |
+| Docker Compose | Configuração válida; imagem não construída porque o daemon Docker não estava disponível | 07/11/2026 |
+| OpenAPI versionado | Pendente: `docs/openapi.yaml` não existe nesta cópia | 07/11/2026 |
+
+A verificação anterior de oito respostas HTTP com 501 pertence à baseline anterior ao UC01 e não
+comprova o comportamento atual.
 
 ---
 
-## 1. Desempenho de ponta a ponta (RNF04)
+## 2. Rodada com participante
 
-Mede o tempo entre o envio do pedido e a resposta completa, em três execuções por caso. A meta é 15
-segundos ou menos, a validar após a primeira rodada, porque depende da chamada ao Gemini. Registre o
-método de medição usado (`Measure-Command` ou `curl.exe -w "%{time_total}"`).
+Ainda não executada. Não há tempos nem resultados de usabilidade a registrar.
 
-| Caso | Tipo | Execução 1 (s) | Execução 2 (s) | Execução 3 (s) | Média (s) | Dentro de 15 s |
-| ---- | ---- | -------------- | -------------- | -------------- | --------- | -------------- |
-| CT-01 | Pedido claro, ficha gravada | a medir | a medir | a medir | a medir | a medir |
-| CT-09 | Pedido com vários sintomas | a medir | a medir | a medir | a medir | a medir |
-| CT-13 | Pedido com pergunta de esclarecimento (422) | a medir | a medir | a medir | a medir | a medir |
-| CT-20 | Pedido com linguagem informal | a medir | a medir | a medir | a medir | a medir |
-
-**Resumo:** média geral e máximo registrado: a medir.
+| Tarefa | Participante | Resultado | Tempo | Observação |
+| ------ | ------------ | --------- | ----- | ---------- |
+| T1 — CT-01 | a registrar | não executada | — | Depende de PostgreSQL e Gemini |
+| T2 — CT-13 | a registrar | não executada | — | Depende de PostgreSQL e Gemini |
+| T3 — contrato inválido | a registrar | não executada | — | — |
+| T4 — idempotência | a registrar | não executada | — | — |
+| T5 — saída inválida | a registrar | não executada | — | — |
+| T6 — indisponibilidade | a registrar | não executada | — | — |
 
 ---
 
-## 2. Tarefas de integração
+## 3. Desempenho de ponta a ponta
 
-Uma linha por tarefa e por participante. Use "concluída", "com ajuda" ou "não concluída".
+| Caso | Execução 1 | Execução 2 | Execução 3 | Média | Meta de 15 s |
+| ---- | ---------- | ---------- | ---------- | ----- | ------------ |
+| CT-01 | a medir | a medir | a medir | a medir | a avaliar |
+| CT-13 | a medir | a medir | a medir | a medir | a avaliar |
 
-| Tarefa | Participante | Resultado | Tempo (s) | Observação |
-| ------ | ------------ | --------- | --------- | ---------- |
-| T1 | a registrar | a medir | a medir | a medir |
-| T2 | a registrar | a medir | a medir | a medir |
-| T3 | a registrar | a medir | a medir | a medir |
-| T4 | a registrar | a medir | a medir | a medir |
-| T5 | a registrar | a medir | a medir | a medir |
-| T6 | a registrar | a medir | a medir | a medir |
+A medição depende de chamada real ao Gemini e não foi estimada.
 
 ---
 
-## 3. Divergências entre contrato e resposta real
+## 4. Divergências entre contrato e resposta
 
-Registre cada diferença encontrada entre o `openapi.yaml` e a resposta da API, com data e endpoint.
-Uma divergência é corrigida no contrato ou no código, nunca apenas anotada.
-
-| Data | Endpoint | Esperado (`openapi.yaml`) | Obtido | Correção | Resolvido |
-| ---- | -------- | ------------------------- | ------ | -------- | --------- |
-| a registrar | a registrar | a registrar | a registrar | a registrar | a registrar |
-
-Se não houver divergência durante a rodada, escreva "nenhuma divergência registrada".
+| Data | Endpoint | Esperado | Obtido | Correção | Situação |
+| ---- | -------- | -------- | ------ | -------- | -------- |
+| a registrar | `POST /api/triagem` | Documento 04 e OpenAPI gerado | a registrar | a registrar | rodada pendente |
 
 ---
 
-## 4. Fricções de integração (feedback)
+## 5. Fricções, travamentos e erros
 
-Registre cada ponto que o participante marcou como confuso, mesmo que a tarefa tenha sido concluída.
-
-| Data | Participante | Ponto de fricção | Sugestão do participante | Decisão |
-| ---- | ------------ | ---------------- | ------------------------ | ------- |
-| a registrar | a registrar | a registrar | a registrar | a registrar: aceito, recusado ou adiado (com motivo) |
-
----
-
-## 5. Travamentos e erros de interface
-
-Registre qualquer erro 500, resposta sem ProblemDetails, tempo de resposta que expirou ou resposta
-vazia, com data, hora e caso.
-
-| Data e hora | Endpoint | Caso ou tarefa | Descrição | Resolvido |
-| ----------- | -------- | -------------- | --------- | --------- |
-| a registrar | a registrar | a registrar | a registrar | a registrar |
-
-Se não houver nenhum erro durante a rodada, escreva "nenhum erro registrado" nesta seção.
+| Data | Tarefa | Tipo | Descrição | Decisão |
+| ---- | ------ | ---- | --------- | ------- |
+| a registrar | a registrar | fricção, travamento ou erro | a registrar | a registrar |
 
 ---
 
 ## 6. Conclusão
 
-- **Tempo dentro da meta:** a registrar.
-- **Tarefas concluídas sem ajuda:** a registrar.
-- **Divergências de contrato encontradas e corrigidas:** a registrar.
-- **Problemas de integração encontrados:** a registrar.
-- **Mudança proposta para o contrato ou a documentação:** a registrar, ou "nenhuma" se o resultado for satisfatório.
+- **Rodada de usabilidade:** não executada.
+- **Integração automatizada:** 59 testes unitários aprovados.
+- **Próximo passo:** iniciar PostgreSQL e API, configurar credenciais e executar T1 a T6.
 
 ---
 
@@ -102,6 +80,7 @@ Se não houver nenhum erro durante a rodada, escreva "nenhum erro registrado" ne
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
-| 2.2 | 05/11/2026 | Marca o teste 501 como baseline anterior e registra que a nova rodada depende do ambiente do UC01. |
-| 2.1 | 05/11/2026 | Corrige o registro: `docs/openapi.yaml` está ausente e registra a verificação real do OpenAPI gerado e do contrato HTTP parcial. |
+| 2.3 | 07/11/2026 | Atualiza as evidências para o UC01, 59 testes xUnit e Compose com API; mantém a rodada humana como não executada. |
+| 2.2 | 05/11/2026 | Marca o teste 501 como baseline anterior e registra dependências externas. |
+| 2.1 | 05/11/2026 | Registra o OpenAPI gerado e a ausência do arquivo versionado. |
 | 2.0 | 04/11/2026 | Cria o registro de usabilidade da API. |

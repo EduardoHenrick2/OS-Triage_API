@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using OsTriageApi.Endpoints;
 using OsTriageApi.Relatos.Aplicacao;
 using OsTriageApi.Relatos.Configuracao;
@@ -6,6 +7,8 @@ using OsTriageApi.Relatos.Infraestrutura;
 using OsTriageApi.Relatos.Infraestrutura.Persistencia;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddKeyPerFile("/run/secrets", optional: true);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -35,7 +38,16 @@ builder.Services.ConfigureHttpJsonOptions(opcoes =>
     OpcoesJsonRelato.Configurar(opcoes.SerializerOptions));
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres deve ser configurada em user-secrets.");
+    ?? throw new InvalidOperationException("ConnectionStrings:Postgres deve ser configurada em user-secrets ou pelo ambiente do contêiner.");
+var postgresPassword = builder.Configuration["PostgresPassword"];
+if (!string.IsNullOrWhiteSpace(postgresPassword))
+{
+    var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+    {
+        Password = postgresPassword
+    };
+    connectionString = connectionBuilder.ConnectionString;
+}
 builder.Services.AddDbContext<TriagemDbContext>(opcoes => opcoes.UseNpgsql(connectionString));
 builder.Services.AddScoped<ITriagemRepository, EfTriagemRepository>();
 builder.Services.AddScoped<IRelatoHasher, RelatoHasher>();
@@ -50,7 +62,12 @@ builder.Services.AddHttpClient<ILlmClient, GeminiLlmClient>((services, client) =
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TriagemDbContext>();
+    dbContext.Database.Migrate();
     app.MapOpenApi();
+}
 
 app.MapTriagemEndpoints();
 

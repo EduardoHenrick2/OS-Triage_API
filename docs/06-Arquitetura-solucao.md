@@ -1,7 +1,7 @@
 # 06 — Arquitetura da solução e modelo de dados
 
-- **Versão:** 2.2
-- **Data da última mudança:** 05/11/2026
+- **Versão:** 2.3
+- **Data da última mudança:** 07/11/2026
 - **Substitui:** versão 1.0, que descrevia a arquitetura em n8n e planilha ou CSV
 
 ---
@@ -579,6 +579,7 @@ crescer a ponto de exigir isolamento físico, a divisão em assemblies será uma
 | `ValidadorSaidaLlm` | `Relatos/Validacao` | Valida JSON, esquema, tipos e categoria; rejeita chaves desconhecidas | RF02, RF03, RNF03 |
 | `RegrasUrgencia` | `Relatos/Validacao` | Procura palavras de risco no relato normalizado | RF04 |
 | `ConfirmadorAno` | `Relatos/Validacao` | Mantém o ano somente se aparecer no relato; confirmação do modelo está pendente | RNF08 |
+| `DecisorTriagem` | `Relatos/Validacao` | Combina confirmação do ano, campos não confirmados e `RegrasFicha` | RF04, RF05, RNF08 |
 | `RegrasFicha` | `Relatos/Validacao` | Lista os campos obrigatórios ausentes e aplica o piso de urgência | RF04, RF05 |
 | `LimitadorPalavras` | `Relatos/Validacao` | Conta palavras da mensagem ao cliente | RF07 |
 | `TabelaMarcas` | `Relatos/Modelos` (futuro) | Enriquecimento de marca por tabela estática, depois da confirmação | Seção 6.4 da especificação |
@@ -762,28 +763,40 @@ Tudo roda na máquina do desenvolvedor. Não há servidor, nuvem contínua nem h
 - O fuso horário de exibição é `America/Sao_Paulo`. O banco guarda em UTC.
 
 ```yaml
-# docker-compose.yml (trecho)
+# docker-compose.yml (resumo)
 services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # segredo de inicialização
-      APP_PASSWORD: ${POSTGRES_PASSWORD}        # usado somente pelo script de criação da role
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - os_triage_pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U os_triage_app -d os_triage_api"]
-      interval: 5s
-      retries: 10
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      APP_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
 
-volumes:
-  os_triage_pgdata:
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      Kestrel__Endpoints__Http__Url: http://0.0.0.0:5197
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=os_triage_api;Username=os_triage_app
+    secrets:
+      - source: postgres_password
+        target: PostgresPassword
+      - source: gemini_api_key
+        target: Gemini__ApiKey
+      - source: privacidade_chave_hmac
+        target: Privacidade__ChaveHmac
+    ports: ["127.0.0.1:5197:5197"]
+
+secrets:
+  postgres_password:
+    environment: POSTGRES_PASSWORD
+  gemini_api_key:
+    environment: GEMINI_API_KEY
+  privacidade_chave_hmac:
+    environment: PRIVACIDADE_CHAVE_HMAC
 ```
 
 `docker compose down -v` apaga o volume e os dados de execução. Não deve ser usado com dados
@@ -915,6 +928,7 @@ Fora da versão 2.0, por escopo ou por custo de implementação:
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.3 | 07/11/2026 | Registra `DecisorTriagem`, contêiner da API e Docker secrets para PostgreSQL, Gemini e HMAC. |
 | 2.2 | 05/11/2026 | Registra UC01, EF Core/Npgsql, migração inicial, cliente Gemini REST com saída estruturada e confirmação apenas do ano; aplicação da migração e chamada real permanecem pendentes por ambiente. |
 | 2.1 | 05/11/2026 | Confirma Minimal APIs em um único projeto `OsTriageApi`, com pastas por responsabilidade, suítes separadas e escuta exclusiva em `127.0.0.1:5197`. |
 | 2.0 | 04/11/2026 | Define a arquitetura inicial da API .NET e do PostgreSQL. |

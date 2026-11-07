@@ -1,7 +1,7 @@
 # 08 — Registro de testes de software
 
-- **Versão:** 2.2
-- **Data da última mudança:** 05/11/2026
+- **Versão:** 2.3
+- **Data da última mudança:** 07/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
 Este registro reúne três tipos de evidência: execuções das suítes xUnit, integridade do gabarito
@@ -15,6 +15,9 @@ Uma linha por execução. Preencha a data e o total reais da rodada. Não estime
 
 | Data | Suíte | Escopo | Ambiente | Total | Passou | Falhou | Ignorado | Situação |
 | ---- | ----- | ------ | -------- | ----- | ------ | ------ | -------- | -------- |
+| 07/11/2026 | Compilação de `src/OsTriageApi` | Cliente Gemini, endpoint, `DecisorTriagem` e configuração Docker | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
+| 07/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Contrato, núcleo determinístico e UC01 com dependências simuladas | SDK .NET 10.0.401, Windows | 59 | 59 | 0 | 0 | Concluída em 635 ms |
+| 07/11/2026 | Validação do Docker Compose | API e PostgreSQL com Docker secrets | Docker Compose CLI, daemon indisponível | 1 | 1 | 0 | 0 | `docker compose config --quiet` aprovado; imagens não iniciadas |
 | 05/11/2026 | Compilação do UC01 em `src/OsTriageApi` | Endpoint, aplicação, Gemini, EF Core e migração | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
 | 05/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Núcleo anterior, validação da saída e fluxo UC01 com dependências simuladas | SDK .NET 10.0.401, Windows | 57 | 57 | 0 | 0 | Concluída em 94 ms |
 | 05/11/2026 | Compilação de `src/OsTriageApi` | Projeto principal | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
@@ -157,6 +160,7 @@ prompt, que deve ser uma só, e os erros que continuam depois da v2.
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.3 | 07/11/2026 | Registra 59 testes, `DecisorTriagem` e validação do Compose com API e Docker secrets. |
 | 2.2 | 05/11/2026 | Registra 57 testes do UC01 e os bloqueios externos de Docker, PostgreSQL e user-secrets. |
 | 2.1 | 05/11/2026 | Registra build, 44 testes unitários e os oito casos HTTP executados contra o endpoint parcial. |
 | 2.0 | 04/11/2026 | Cria o registro para as suítes e futuras avaliações. |

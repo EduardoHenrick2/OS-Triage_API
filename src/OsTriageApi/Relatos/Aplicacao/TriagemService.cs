@@ -85,13 +85,10 @@ public sealed class TriagemService(
         if (ficha is null || respostaExtracao is null)
             return new ResultadoTriagem(TipoResultadoTriagem.SaidaLlmInvalida, idPedido, UrgenciaRiscoDetectado: riscoDetectado);
 
-        var anoConfirmado = ConfirmadorAno.Confirmar(ficha.Ano, relato);
-        var camposNaoConfirmados = ficha.Ano is not null && anoConfirmado is null
-            ? new[] { "ano" }
-            : Array.Empty<string>();
-        ficha = ficha with { Ano = anoConfirmado };
-
-        var regras = RegrasFicha.Avaliar(ficha, relato);
+        var decisao = DecisorTriagem.Avaliar(ficha, relato);
+        ficha = decisao.Ficha;
+        var camposNaoConfirmados = decisao.CamposNaoConfirmados;
+        var regras = decisao.Regras;
         if (!regras.Gravavel)
         {
             try

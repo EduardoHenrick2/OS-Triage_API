@@ -1,8 +1,9 @@
 #!/bin/sh
 set -eu
 
-psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
-  --set=app_password="$APP_PASSWORD" <<'SQL'
+APP_PASSWORD="$(cat "$APP_PASSWORD_FILE")"
+
+psql --set=ON_ERROR_STOP=1 --set=app_password="$APP_PASSWORD" --username "$POSTGRES_USER" --dbname postgres <<'SQL'
 CREATE ROLE os_triage_app
     LOGIN
     NOSUPERUSER
