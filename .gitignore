@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Kiro specifications (local-only)
+.kiro/
+
 # User-specific files
 *.rsuser
 *.suo

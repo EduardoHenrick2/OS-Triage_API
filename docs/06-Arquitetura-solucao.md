@@ -1,7 +1,7 @@
 # 06 — Arquitetura da solução e modelo de dados
 
-- **Versão:** 2.3
-- **Data da última mudança:** 07/11/2026
+- **Versão:** 2.4
+- **Data da última mudança:** 13/11/2026
 - **Substitui:** versão 1.0, que descrevia a arquitetura em n8n e planilha ou CSV
 
 ---
@@ -539,6 +539,9 @@ ser revista com o tempo real medido na avaliação (meta de RNF04).
 
 ```
 os-triage-api/
+├── OsTriageApi.slnx                   # Solução: src/OsTriageApi e tests/OsTriageApi.Tests.Unit
+├── Directory.Build.props              # Nullable e TreatWarningsAsErrors para todos os projetos
+├── .config/dotnet-tools.json          # dotnet-ef 10.0.4, igual ao EF Core do projeto
 ├── src/
 │   └── OsTriageApi/
 │       ├── Endpoints/                 # Minimal APIs e tradução para respostas HTTP
@@ -575,6 +578,7 @@ crescer a ponto de exigir isolamento físico, a divisão em assemblies será uma
 | `ILlmClient` | `Relatos/Aplicacao` | Contrato de extração e de redação, independente do fornecedor | RNF09 |
 | `GeminiLlmClient` | `Relatos/Infraestrutura` | Implementa `ILlmClient` com `HttpClient` tipado | RF02, RF09 |
 | `ConsultaOrdensService` | Aplicação (futuro) | Executa o UC02 com filtros e ordenação | RF13 |
+| `PromptsGemini` | `Relatos/Configuracao` | Carrega `prompts/{Gemini:VersaoPrompt}.md` na inicialização, valida seções e marcadores e renderiza os prompts em uma única passagem | RNF07 |
 | `CategoriasCanonicas` | `Relatos/Modelos` | Lista canônica das 8 categorias e normalização | RF03 |
 | `ValidadorSaidaLlm` | `Relatos/Validacao` | Valida JSON, esquema, tipos e categoria; rejeita chaves desconhecidas | RF02, RF03, RNF03 |
 | `RegrasUrgencia` | `Relatos/Validacao` | Procura palavras de risco no relato normalizado | RF04 |
@@ -845,7 +849,7 @@ que se queira manter.
 | Token do bot e segredo do webhook | User-secrets ou variável de ambiente | Nunca em arquivo versionado |
 | Senha do PostgreSQL | `.env` (copiado de `.env.example`) e user-secrets | `.env` está no `.gitignore` |
 | Configurações não sensíveis | `appsettings.json` | Pode ser versionado |
-| Prompts | `prompts/v1.md`, `v2.md` | Versionados no Git (RNF07) |
+| Prompts | `prompts/v1.md`, `v2.md` | Versionados no Git (RNF07). Copiados para a saída do build e do publish. A API não inicia se o arquivo de `Gemini:VersaoPrompt` não existir; a mensagem de erro informa o caminho esperado |
 | Gabarito | `tests/casos_teste.csv` | Somente dados fictícios |
 | Resultados de avaliação | `data/` | Fora do Git |
 
@@ -928,6 +932,7 @@ Fora da versão 2.0, por escopo ou por custo de implementação:
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.4 | 13/11/2026 | Externaliza os prompts para `prompts/v1.md` (`PromptsGemini`), registra solução `.slnx`, `Directory.Build.props` e manifesto do `dotnet-ef`. |
 | 2.3 | 07/11/2026 | Registra `DecisorTriagem`, contêiner da API e Docker secrets para PostgreSQL, Gemini e HMAC. |
 | 2.2 | 05/11/2026 | Registra UC01, EF Core/Npgsql, migração inicial, cliente Gemini REST com saída estruturada e confirmação apenas do ano; aplicação da migração e chamada real permanecem pendentes por ambiente. |
 | 2.1 | 05/11/2026 | Confirma Minimal APIs em um único projeto `OsTriageApi`, com pastas por responsabilidade, suítes separadas e escuta exclusiva em `127.0.0.1:5197`. |

@@ -1,7 +1,7 @@
 # 08 — Registro de testes de software
 
-- **Versão:** 2.3
-- **Data da última mudança:** 07/11/2026
+- **Versão:** 2.4
+- **Data da última mudança:** 13/11/2026
 - **Substitui:** versão 1.0 (30/10/2026)
 
 Este registro reúne três tipos de evidência: execuções das suítes xUnit, integridade do gabarito
@@ -15,6 +15,9 @@ Uma linha por execução. Preencha a data e o total reais da rodada. Não estime
 
 | Data | Suíte | Escopo | Ambiente | Total | Passou | Falhou | Ignorado | Situação |
 | ---- | ----- | ------ | -------- | ----- | ------ | ------ | -------- | -------- |
+| 13/11/2026 | Compilação da solução (`dotnet build` na raiz) | `src/OsTriageApi` e `tests/OsTriageApi.Tests.Unit` com `TreatWarningsAsErrors` | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos. O cache global do NuGet estava corrompido; usado cache isolado |
+| 13/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Núcleo, UC01 simulado e carregamento dos prompts (`PromptsGemini`) | SDK .NET 10.0.401, Windows | 72 | 72 | 0 | 0 | Concluída em 474 ms. Inclui a igualdade palavra por palavra com o prompt anterior |
+| 13/11/2026 | Verificação do manifesto de ferramentas | `dotnet tool restore` e `dotnet-ef --version` | SDK .NET 10.0.401, Windows | 1 | 1 | 0 | 0 | `dotnet-ef` 10.0.4 restaurado |
 | 07/11/2026 | Compilação de `src/OsTriageApi` | Cliente Gemini, endpoint, `DecisorTriagem` e configuração Docker | SDK .NET 10.0.401, Windows | — | — | — | — | Concluída: 0 erros e 0 avisos |
 | 07/11/2026 | Unidade (`tests/OsTriageApi.Tests.Unit`, xUnit) | Contrato, núcleo determinístico e UC01 com dependências simuladas | SDK .NET 10.0.401, Windows | 59 | 59 | 0 | 0 | Concluída em 635 ms |
 | 07/11/2026 | Validação do Docker Compose | API e PostgreSQL com Docker secrets | Docker Compose CLI, daemon indisponível | 1 | 1 | 0 | 0 | `docker compose config --quiet` aprovado; imagens não iniciadas |
@@ -65,7 +68,9 @@ nova rodada de medição.
 | ----------- | --------- | ---- |
 | Hash SHA-256 das 24 linhas da seção 5.2 do [plano de testes](07-Plano-testes-software.md), sem quebras de linha de Windows (CR) | `1c8858d34255eaa57684af6b6b916d1f16850f1b970f1ab64bc81faedcd3521b` | 04/11/2026 |
 | Hash igual ao do gabarito recebido no pacote original de planejamento | Sim | 04/11/2026 |
-| Congelamento no commit `dcd385f` | Pendente: o desenvolvedor valida o commit localmente antes do primeiro push | a registrar |
+| `tests/casos_teste.csv` gerado da seção 5.2: 24 casos, CT-01 a CT-24, comparados campo a campo com a tabela, sem divergência | Sim. SHA-256 do arquivo (UTF-8 sem BOM, quebras `LF`): `87bdae51558a2254fdf6d2d0d6644f3de0c9e59869f310e654ac3e77e166338b` | 13/11/2026 |
+| Hash da tabela da seção 5.2 recalculado depois das mudanças de 13/11/2026 | `1c8858d34255eaa57684af6b6b916d1f16850f1b970f1ab64bc81faedcd3521b`, igual ao congelado | 13/11/2026 |
+| Congelamento no commit `dcd385f` | Pendente: o commit real que congela o gabarito (tabela e `tests/casos_teste.csv`) ainda não foi registrado. A referência `dcd385f` não existe no repositório | a registrar |
 
 A seção 5.4 do plano de testes tem uma tabela de comparação com colunas parecidas com as do
 gabarito. Ela não faz parte do gabarito, por isso não entra no hash.
@@ -160,6 +165,7 @@ prompt, que deve ser uma só, e os erros que continuam depois da v2.
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.4 | 13/11/2026 | Registra build da solução, 72 testes, manifesto do `dotnet-ef` e o `tests/casos_teste.csv` com seu hash. |
 | 2.3 | 07/11/2026 | Registra 59 testes, `DecisorTriagem` e validação do Compose com API e Docker secrets. |
 | 2.2 | 05/11/2026 | Registra 57 testes do UC01 e os bloqueios externos de Docker, PostgreSQL e user-secrets. |
 | 2.1 | 05/11/2026 | Registra build, 44 testes unitários e os oito casos HTTP executados contra o endpoint parcial. |

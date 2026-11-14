@@ -1,9 +1,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
+COPY Directory.Build.props ./
 COPY src/OsTriageApi/OsTriageApi.csproj src/OsTriageApi/
 RUN dotnet restore src/OsTriageApi/OsTriageApi.csproj
 
+COPY prompts/ prompts/
 COPY src/OsTriageApi/ src/OsTriageApi/
 RUN dotnet publish src/OsTriageApi/OsTriageApi.csproj \
     --configuration Release \

@@ -1,7 +1,7 @@
 # 12 — Manual de instalação e execução
 
-- **Versão:** 2.3
-- **Data da última mudança:** 07/11/2026
+- **Versão:** 2.4
+- **Data da última mudança:** 13/11/2026
 - **Substitui:** versão 1.0 (instalação do n8n em Docker)
 
 Este manual leva da máquina vazia até a API respondendo, com o banco migrado, os testes
@@ -267,7 +267,8 @@ registre o webhook de novo.
 | ---- | ------- |
 | Ver se o PostgreSQL está saudável | `docker compose ps` |
 | Ver os logs do PostgreSQL | `docker compose logs -f postgres` |
-| Compilar a solução | `dotnet build` |
+| Compilar a solução (`OsTriageApi.slnx`) | `dotnet build` na raiz |
+| Restaurar o `dotnet-ef` fixado | `dotnet tool restore` |
 | Listar as migrações | `dotnet ef migrations list --project src\OsTriageApi --startup-project src\OsTriageApi` |
 | Parar o PostgreSQL, mantendo os dados | `docker compose down` |
 
@@ -319,6 +320,7 @@ quando houver dados que devam ser preservados.
 
 | Versão | Data | Mudança |
 | ------ | ---- | ------- |
+| 2.4 | 13/11/2026 | Documenta a solução `.slnx`, o `dotnet tool restore` e o prompt externo `prompts/v1.md`, cujo arquivo ausente impede a API de iniciar. |
 | 2.3 | 07/11/2026 | Documenta a pilha completa com API, PostgreSQL, Dockerfile e Docker secrets. |
 | 2.2 | 05/11/2026 | Atualiza o primeiro teste para o UC01 e documenta as dependências obrigatórias em user-secrets e PostgreSQL. |
 | 2.1 | 05/11/2026 | Atualiza comandos para o projeto único, nomes das suítes, endereço `127.0.0.1:5197` e resposta 501 da etapa atual. |

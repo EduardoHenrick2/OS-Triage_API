@@ -37,6 +37,10 @@ builder.Services
 builder.Services.ConfigureHttpJsonOptions(opcoes =>
     OpcoesJsonRelato.Configurar(opcoes.SerializerOptions));
 
+// Falha na inicialização, com o caminho esperado, se o prompt da versão configurada não existir.
+var geminiConfigurado = builder.Configuration.GetSection(GeminiOpcoes.Secao).Get<GeminiOpcoes>() ?? new GeminiOpcoes();
+builder.Services.AddSingleton(PromptsGemini.Carregar(AppContext.BaseDirectory, geminiConfigurado.VersaoPrompt));
+
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres deve ser configurada em user-secrets ou pelo ambiente do contêiner.");
 var postgresPassword = builder.Configuration["PostgresPassword"];
